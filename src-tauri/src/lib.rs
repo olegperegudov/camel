@@ -36,6 +36,10 @@ struct AppState {
     snapshot: Mutex<Option<limits::Snapshot>>,
     update_badge: AtomicBool,
     update_version: Mutex<Option<String>>,
+    /// macOS delivers tray clicks inconsistently across versions — some send
+    /// Down, some Up, some both. The handler reacts to either and this stamp
+    /// keeps a Down+Up pair from toggling the panel twice.
+    last_toggle: Mutex<Option<std::time::Instant>>,
 }
 
 /// Everything the panel shows, in one payload: both windows, freshness, the
@@ -116,9 +120,15 @@ fn apply_tray(app: &AppHandle) {
             if let Err(e) = tray.set_icon(Some(icon)) {
                 debug_log::log(&format!("tray: set_icon failed: {}", e));
             }
-            if let Err(e) = tray.set_title(snapshot.map(|s| format!("{}%", limits::worst(&s)))) {
-                debug_log::log(&format!("tray: set_title failed: {}", e));
-            }
+            // Bars only in the bar itself; the numbers live one hover away.
+            let tip = match snapshot {
+                Some(s) => format!(
+                    "Camel — 5h {}% · week {}% left",
+                    s.five_hour.remaining, s.seven_day.remaining
+                ),
+                None => "Camel — no limit data yet".to_string(),
+            };
+            let _ = tray.set_tooltip(Some(tip));
             debug_log::log(&format!(
                 "tray painted: bars {:?}, badge {}",
                 bars, badge
@@ -145,8 +155,19 @@ fn announce_update(app: &AppHandle, version: &str) {
 }
 
 /// Left click on the tray: the panel appears right under the icon, or goes
-/// away if it is up. The click rect arrives in physical pixels.
-fn toggle_panel(app: &AppHandle, rect: &tauri::Rect) {
+/// away if it is up. `rect` is the tray icon's frame when the click delivered
+/// one; the menu fallback has none and parks the panel at the top right.
+fn toggle_panel(app: &AppHandle, rect: Option<&tauri::Rect>) {
+    if let Some(state) = app.try_state::<AppState>() {
+        // One toggle per gesture: macOS may deliver both Down and Up.
+        if let Ok(mut last) = state.last_toggle.lock() {
+            let now = std::time::Instant::now();
+            if last.is_some_and(|t| now.duration_since(t).as_millis() < 350) {
+                return;
+            }
+            *last = Some(now);
+        }
+    }
     let Some(window) = app.get_webview_window("panel") else { return };
     if window.is_visible().unwrap_or(false) {
         let _ = window.hide();
@@ -165,12 +186,21 @@ fn toggle_panel(app: &AppHandle, rect: &tauri::Rect) {
         .unwrap_or(PANEL_H);
     let _ = window.set_size(tauri::LogicalSize::new(PANEL_W, panel_h));
     let scale = window.scale_factor().unwrap_or(1.0);
-    let (px, py) = match (rect.position, rect.size) {
-        (tauri::Position::Physical(p), tauri::Size::Physical(s)) => {
+    let (px, py) = match rect.map(|r| (r.position, r.size)) {
+        Some((tauri::Position::Physical(p), tauri::Size::Physical(s))) => {
             (p.x as f64 / scale + s.width as f64 / scale / 2.0, p.y as f64 / scale + s.height as f64 / scale)
         }
-        (tauri::Position::Logical(p), tauri::Size::Logical(s)) => (p.x + s.width / 2.0, p.y + s.height),
-        _ => (0.0, 0.0),
+        Some((tauri::Position::Logical(p), tauri::Size::Logical(s))) => (p.x + s.width / 2.0, p.y + s.height),
+        // Menu fallback: top-right corner of the screen the panel lives on.
+        _ => {
+            let width = window
+                .current_monitor()
+                .ok()
+                .flatten()
+                .map(|m| m.size().width as f64 / m.scale_factor())
+                .unwrap_or(1440.0);
+            (width - PANEL_W / 2.0 - 8.0, 30.0)
+        }
     };
     // Centred under the icon on macOS; above the taskbar icon on Windows,
     // where the tray lives at the bottom of the screen.
@@ -191,6 +221,7 @@ pub fn run() {
             snapshot: Mutex::new(None),
             update_badge: AtomicBool::new(false),
             update_version: Mutex::new(None),
+            last_toggle: Mutex::new(None),
         })
         .invoke_handler(tauri::generate_handler![
             get_limits,
@@ -269,6 +300,9 @@ pub fn run() {
 /// then quit. The panel itself hangs on the left click.
 fn build_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let update = MenuItem::with_id(app, "update", "Check for updates", true, None::<&str>)?;
+    // Menu route to the panel: tray click events are flaky across macOS
+    // versions, and a panel only reachable by a dead gesture is a dead panel.
+    let show = MenuItem::with_id(app, "panel", "Show limits", true, None::<&str>)?;
     let version = MenuItem::with_id(
         app,
         "version",
@@ -280,6 +314,8 @@ fn build_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
     let menu = MenuBuilder::new(app)
         .item(&update)
+        .separator()
+        .item(&show)
         .separator()
         .item(&version)
         .item(&quit)
@@ -309,13 +345,21 @@ fn build_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                     on_update_clicked(app).await;
                 });
             }
+            "panel" => toggle_panel(app, None),
             "quit" => app.exit(0),
             _ => {}
         })
         .on_tray_icon_event(|tray, event| {
-            if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, rect, .. } = event
-            {
-                toggle_panel(tray.app_handle(), &rect);
+            // Down or Up, whichever this macOS decides to send — toggle_panel
+            // debounces the pair. Everything is logged: the next "click does
+            // nothing" report starts from facts, not guesses.
+            if let TrayIconEvent::Click { button, button_state, rect, .. } = event {
+                debug_log::log(&format!("tray event: {:?} {:?}", button, button_state));
+                if button == MouseButton::Left
+                    && matches!(button_state, MouseButtonState::Down | MouseButtonState::Up)
+                {
+                    toggle_panel(tray.app_handle(), Some(&rect));
+                }
             }
         })
         .build(app)?;

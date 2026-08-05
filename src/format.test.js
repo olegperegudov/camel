@@ -5,12 +5,12 @@ import { age, levelOf, resetIn, resetWhen } from './format.js';
 const NOW = Math.floor(new Date(2026, 7, 5, 14, 32).getTime() / 1000);
 
 describe('levelOf mirrors the status line thresholds', () => {
-  test('50 and up is fine, 20–49 is low, below 20 is critical', () => {
+  test('50 and up is fine, 25–49 is low, below 25 is critical', () => {
     expect(levelOf(100)).toBe('ok');
     expect(levelOf(50)).toBe('ok');
     expect(levelOf(49)).toBe('low');
-    expect(levelOf(20)).toBe('low');
-    expect(levelOf(19)).toBe('critical');
+    expect(levelOf(25)).toBe('low');
+    expect(levelOf(24)).toBe('critical');
   });
 });
 

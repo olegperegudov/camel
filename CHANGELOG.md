@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.5 — 2026-08-05
+
+- Tray is bars only (as designed): the percent moved to the hover tooltip and
+  the panel. Red now starts at three quarters spent (was 80%).
+- Panel opens reliably: the click handler takes Down or Up (macOS delivers
+  either, debounced), and a "Show limits" menu item backs the gesture up.
+- Tray click events are logged.
+
 ## 0.1.2 — 2026-08-05
 
 - Fix: fractional `used_percentage` (e.g. `7.0`) parsed as no-data — the tray

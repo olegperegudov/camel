@@ -35,9 +35,8 @@ After downloading:
 ## Two bars, zero clicks
 
 The left bar is your 5-hour window, the right one is your week. Green means
-plenty, yellow means half gone, red means running dry. The number is whichever
-window is closer to empty. A green dot on the icon means a Camel update is
-ready.
+plenty, yellow means half is gone, red means three quarters are. Hover for the
+exact numbers. A green dot on the icon means a Camel update is ready.
 
 <p align="center"><img src="docs/screenshots/tray.png" width="380" alt="Menu bar states: fine, running low, update ready" /></p>
 

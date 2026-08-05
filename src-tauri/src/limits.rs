@@ -9,11 +9,10 @@ use serde::Serialize;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-/// Remaining percentage at which the bar turns yellow / red. Mirrors the
-/// thresholds of the in-session status line (yellow at 50% used, red at 80%),
-/// so the tray and the terminal never disagree about how bad things are.
+/// Remaining percentage at which the bar turns yellow / red: yellow once
+/// half the window is spent, red once three quarters are.
 pub const LOW_AT: u8 = 50;
-pub const CRITICAL_AT: u8 = 20;
+pub const CRITICAL_AT: u8 = 25;
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub struct Window {
@@ -152,8 +151,8 @@ mod tests {
         assert_eq!(level(100), Level::Ok);
         assert_eq!(level(50), Level::Ok);
         assert_eq!(level(49), Level::Low);
-        assert_eq!(level(20), Level::Low);
-        assert_eq!(level(19), Level::Critical);
+        assert_eq!(level(25), Level::Low);
+        assert_eq!(level(24), Level::Critical);
         assert_eq!(level(0), Level::Critical);
     }
 

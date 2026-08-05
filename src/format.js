@@ -2,9 +2,9 @@
 // Kept free of Tauri so vitest can chew on it.
 
 // Remaining % at which a window turns yellow / red. Mirrors the Rust side
-// (limits.rs), which mirrors the in-session status line.
+// (limits.rs): yellow at half spent, red at three quarters.
 export const LOW_AT = 50;
-export const CRITICAL_AT = 20;
+export const CRITICAL_AT = 25;
 
 export function levelOf(remaining) {
   if (remaining >= LOW_AT) return 'ok';
