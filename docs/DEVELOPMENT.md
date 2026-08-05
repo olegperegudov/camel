@@ -38,8 +38,7 @@ cargo test --lib                     # in src-tauri: parsing, thresholds, icon, 
 npm run tauri dev
 ```
 
-The tray title (worst-window percent) is macOS-only; Windows gets the icon and
-tooltip.
+The tray shows bars only; exact percents live in the tooltip and the panel.
 
 ## Screenshots
 

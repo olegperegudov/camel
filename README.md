@@ -38,7 +38,7 @@ The left bar is your 5-hour window, the right one is your week. Green means
 plenty, yellow means half is gone, red means three quarters are. Hover for the
 exact numbers. A green dot on the icon means a Camel update is ready.
 
-<p align="center"><img src="docs/screenshots/tray.png" width="380" alt="Menu bar states: fine, running low, update ready" /></p>
+<p align="center"><img src="docs/screenshots/menubar.png" width="380" alt="Menu bar states: fine, running low, update ready" /></p>
 
 ## Click for the full picture
 
