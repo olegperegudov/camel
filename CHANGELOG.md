@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2 — 2026-08-05
+
+- Fix: fractional `used_percentage` (e.g. `7.0`) parsed as no-data — the tray
+  fell back to grey bars whenever Claude Code wrote floats. Regression test.
+
 ## 0.1.0 — 2026-08-05
 
 First release.

@@ -88,12 +88,14 @@ pub fn parse(raw: &str, read_at: i64, now: i64) -> Option<Snapshot> {
     let v: serde_json::Value = serde_json::from_str(raw).ok()?;
     let window = |key: &str| -> Option<Window> {
         let w = &v["rate_limits"][key];
-        let used = w["used_percentage"].as_u64()?;
+        // as_f64, not as_u64: Claude Code writes whatever precision it has,
+        // and "7.0" must not silently read as "no data".
+        let used = w["used_percentage"].as_f64()?;
         let resets_at = w["resets_at"].as_i64()?;
         let remaining = if now >= resets_at {
             100
         } else {
-            100u8.saturating_sub(used.min(100) as u8)
+            (100.0 - used.clamp(0.0, 100.0)).round() as u8
         };
         Some(Window { remaining, resets_at })
     };
@@ -153,6 +155,19 @@ mod tests {
         assert_eq!(level(20), Level::Low);
         assert_eq!(level(19), Level::Critical);
         assert_eq!(level(0), Level::Critical);
+    }
+
+    #[test]
+    fn fractional_percentages_parse_instead_of_vanishing() {
+        // Seen live: the status line wrote 7.0, and an integer-only parser
+        // dropped the whole snapshot on the floor.
+        let raw = r#"{"rate_limits": {
+            "five_hour": {"used_percentage": 7.0, "resets_at": 2000},
+            "seven_day": {"used_percentage": 4.6, "resets_at": 3000}
+        }}"#;
+        let s = parse(raw, 1, 1000).unwrap();
+        assert_eq!(s.five_hour.remaining, 93);
+        assert_eq!(s.seven_day.remaining, 95);
     }
 
     #[test]
