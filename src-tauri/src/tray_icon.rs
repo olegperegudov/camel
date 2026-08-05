@@ -8,14 +8,15 @@
 
 use crate::limits::{level, Level};
 
-/// Canvas size in physical pixels. 44 px = 22 pt @2x, the natural menu-bar
-/// icon size on a Retina Mac; other platforms scale it down.
-pub const SIDE: usize = 44;
+/// Canvas size in pixels. 32 px, same as the neighbours (Iago/Ribbit ship
+/// 32x32.png tray icons): NSImage takes pixel size as points, and a 44 pt
+/// image did not fit the menu bar - the status item rendered nothing at all.
+pub const SIDE: usize = 32;
 
-const BAR_W: usize = 14;
-const GAP: usize = 6;
+const BAR_W: usize = 10;
+const GAP: usize = 4;
 /// Bars sit slightly in from the edges so the badge corner stays clear.
-const MARGIN_Y: usize = 4;
+const MARGIN_Y: usize = 3;
 
 const GREEN: [u8; 4] = [48, 179, 80, 255];
 const YELLOW: [u8; 4] = [224, 168, 0, 255];
@@ -27,8 +28,8 @@ const UNKNOWN: [u8; 4] = [128, 128, 134, 160];
 
 const BADGE: [u8; 4] = [46, 204, 113, 255];
 const BADGE_RIM: [u8; 4] = [18, 90, 50, 255];
-const BADGE_R: f32 = 7.0;
-const BADGE_RIM_W: f32 = 1.8;
+const BADGE_R: f32 = 5.5;
+const BADGE_RIM_W: f32 = 1.5;
 
 fn colour(remaining: u8) -> [u8; 4] {
     match level(remaining) {
@@ -95,8 +96,8 @@ mod tests {
     }
 
     /// Column inside the left bar / right bar.
-    const LX: usize = 12;
-    const RX: usize = 32;
+    const LX: usize = 8;
+    const RX: usize = 24;
 
     #[test]
     fn bar_heights_follow_the_remaining_share() {
@@ -144,8 +145,8 @@ mod tests {
         let plain = render(Some((73, 95)), false);
         let lit = render(Some((73, 95)), true);
         // Badge centre, top-right corner.
-        let cx = SIDE - 8;
-        let cy = 8;
+        let cx = SIDE - 6;
+        let cy = 6;
         assert_eq!(at(&lit, cx, cy), BADGE);
         assert_ne!(at(&plain, cx, cy), BADGE);
         // The rim keeps the badge readable over the bar underneath.

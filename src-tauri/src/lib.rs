@@ -111,9 +111,20 @@ fn apply_tray(app: &AppHandle) {
     let rgba = tray_icon::render(bars, badge);
     let icon =
         tauri::image::Image::new_owned(rgba, tray_icon::SIDE as u32, tray_icon::SIDE as u32);
-    if let Some(tray) = app.tray_by_id("main") {
-        let _ = tray.set_icon(Some(icon));
-        let _ = tray.set_title(snapshot.map(|s| format!("{}%", limits::worst(&s))));
+    match app.tray_by_id("main") {
+        Some(tray) => {
+            if let Err(e) = tray.set_icon(Some(icon)) {
+                debug_log::log(&format!("tray: set_icon failed: {}", e));
+            }
+            if let Err(e) = tray.set_title(snapshot.map(|s| format!("{}%", limits::worst(&s)))) {
+                debug_log::log(&format!("tray: set_title failed: {}", e));
+            }
+            debug_log::log(&format!(
+                "tray painted: bars {:?}, badge {}",
+                bars, badge
+            ));
+        }
+        None => debug_log::log("tray: no tray with id 'main'"),
     }
 }
 
@@ -277,7 +288,17 @@ fn build_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     // announce_update() rewrites this item's text when a release lands.
     app.manage(update.clone());
 
+    // The icon goes in at build time: a status item created empty gets a
+    // zero-width button on macOS, and later set_icon calls paint nothing the
+    // user can see. Grey bars until the first snapshot lands a moment later.
+    let initial = tauri::image::Image::new_owned(
+        tray_icon::render(None, false),
+        tray_icon::SIDE as u32,
+        tray_icon::SIDE as u32,
+    );
     TrayIconBuilder::with_id("main")
+        .icon(initial)
+        .icon_as_template(false)
         .tooltip("Camel — Claude Code limits")
         .menu(&menu)
         .show_menu_on_left_click(false)
