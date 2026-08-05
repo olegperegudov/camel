@@ -1,0 +1,14 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permissions for the panel. Without core:default the frontend cannot listen for events — the bars would update while the panel silently never hears limits-changed.",
+  "windows": [
+    "panel"
+  ],
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "core:window:allow-hide",
+    "core:window:allow-show"
+  ]
+}

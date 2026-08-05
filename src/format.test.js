@@ -1,0 +1,46 @@
+import { describe, expect, test } from 'vitest';
+import { age, levelOf, resetIn, resetWhen } from './format.js';
+
+// Wed 2026-08-05 14:32 local — an anchor mid-day, away from midnight edges.
+const NOW = Math.floor(new Date(2026, 7, 5, 14, 32).getTime() / 1000);
+
+describe('levelOf mirrors the status line thresholds', () => {
+  test('50 and up is fine, 20–49 is low, below 20 is critical', () => {
+    expect(levelOf(100)).toBe('ok');
+    expect(levelOf(50)).toBe('ok');
+    expect(levelOf(49)).toBe('low');
+    expect(levelOf(20)).toBe('low');
+    expect(levelOf(19)).toBe('critical');
+  });
+});
+
+describe('resetWhen', () => {
+  test('same day says today', () => {
+    const at1730 = Math.floor(new Date(2026, 7, 5, 17, 30).getTime() / 1000);
+    expect(resetWhen(at1730, NOW)).toBe('resets today at 17:30');
+  });
+  test('another day names the weekday', () => {
+    const thu0100 = Math.floor(new Date(2026, 7, 6, 1, 0).getTime() / 1000);
+    expect(resetWhen(thu0100, NOW)).toBe('resets Thu at 01:00');
+  });
+});
+
+describe('resetIn', () => {
+  test('minutes under an hour, hours under two days, then days', () => {
+    expect(resetIn(NOW + 40 * 60, NOW)).toBe('in 40 min');
+    expect(resetIn(NOW + 3 * 3600, NOW)).toBe('in 3 h');
+    expect(resetIn(NOW + 3 * 86400, NOW)).toBe('in 3 d');
+  });
+  test('a reset in the past does not go negative', () => {
+    expect(resetIn(NOW - 600, NOW)).toBe('in 0 min');
+  });
+});
+
+describe('age', () => {
+  test('fresh, minutes, hours, days', () => {
+    expect(age(NOW - 30, NOW)).toBe('just now');
+    expect(age(NOW - 5 * 60, NOW)).toBe('5 min ago');
+    expect(age(NOW - 3 * 3600, NOW)).toBe('3 h ago');
+    expect(age(NOW - 2 * 86400, NOW)).toBe('2 d ago');
+  });
+});
