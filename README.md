@@ -26,7 +26,9 @@
 
 After downloading:
 
-1. Open the app. macOS will warn about an unidentified developer — right-click → **Open**, or run `xattr -dr com.apple.quarantine /Applications/Camel.app` once.
+1. Let macOS run it. Gatekeeper calls unnotarized apps "damaged" — run
+   `xattr -dr com.apple.quarantine /Applications/Camel.app` once, or use
+   System Settings → Privacy & Security → **Open Anyway** after the first block.
 2. Make sure your Claude Code status line writes `~/.claude/statusline-last.json` (see below).
 3. Look at the menu bar — the bars are already yours.
 
