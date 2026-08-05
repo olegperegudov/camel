@@ -21,3 +21,13 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 dirs = "6"
 tokio = { version = "1", features = ["time"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+cocoa = "0.26"
+objc = "0.2"
+# NSEvent's global monitor takes an Objective-C block and nothing else — that is
+# how we notice a click landing anywhere outside the panel.
+block = "0.1"
+# Turns the borderless window into a floating NSPanel: an ordinary window of an
+# Accessory app never reached the screen on macOS 26 (see mac_window.rs).
+tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", branch = "v2.1" }

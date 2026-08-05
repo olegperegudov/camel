@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.6 — 2026-08-05
+
+- Left click finally opens the panel. The panel is now a non-activating
+  NSPanel (the Spotlight mechanism, same as Iago): an ordinary window of a
+  menu-bar-only app never reached the screen on macOS 26 — Tauri reported it
+  visible while the window server kept it ordered out. Closes on a click
+  anywhere outside (global NSEvent monitor).
+- Right-click menu slimmed to update / version / quit: "Show limits"
+  duplicated the left click and is gone.
+
 ## 0.1.5 — 2026-08-05
 
 - Tray is bars only (as designed): the percent moved to the hover tooltip and

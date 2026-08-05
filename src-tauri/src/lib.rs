@@ -9,6 +9,7 @@
 
 mod debug_log;
 mod limits;
+mod mac_window;
 mod private;
 mod tray_icon;
 
@@ -40,6 +41,11 @@ struct AppState {
     /// Down, some Up, some both. The handler reacts to either and this stamp
     /// keeps a Down+Up pair from toggling the panel twice.
     last_toggle: Mutex<Option<std::time::Instant>>,
+    /// When the panel last went up. Showing it steals focus from whatever
+    /// closed a beat later (the click itself, the tray menu) and that blur
+    /// arrives right after the show — without a grace period the panel hides
+    /// in the same instant it appears, which reads as "nothing happens".
+    panel_shown_at: Mutex<Option<std::time::Instant>>,
 }
 
 /// Everything the panel shows, in one payload: both windows, freshness, the
@@ -63,9 +69,7 @@ fn js_log(message: String) {
 
 #[tauri::command]
 fn hide_panel(app: AppHandle) {
-    if let Some(w) = app.get_webview_window("panel") {
-        let _ = w.hide();
-    }
+    mac_window::hide_panel(&app);
 }
 
 #[tauri::command]
@@ -169,8 +173,8 @@ fn toggle_panel(app: &AppHandle, rect: Option<&tauri::Rect>) {
         }
     }
     let Some(window) = app.get_webview_window("panel") else { return };
-    if window.is_visible().unwrap_or(false) {
-        let _ = window.hide();
+    if mac_window::panel_visible(app) {
+        mac_window::hide_panel(app);
         return;
     }
     refresh(app);
@@ -192,6 +196,7 @@ fn toggle_panel(app: &AppHandle, rect: Option<&tauri::Rect>) {
         }
         Some((tauri::Position::Logical(p), tauri::Size::Logical(s))) => (p.x + s.width / 2.0, p.y + s.height),
         // Menu fallback: top-right corner of the screen the panel lives on.
+        // px is a *centre*, so keep the full half-width on screen.
         _ => {
             let width = window
                 .current_monitor()
@@ -199,7 +204,7 @@ fn toggle_panel(app: &AppHandle, rect: Option<&tauri::Rect>) {
                 .flatten()
                 .map(|m| m.size().width as f64 / m.scale_factor())
                 .unwrap_or(1440.0);
-            (width - PANEL_W / 2.0 - 8.0, 30.0)
+            (width - PANEL_W / 2.0 - 16.0, 30.0)
         }
     };
     // Centred under the icon on macOS; above the taskbar icon on Windows,
@@ -207,8 +212,13 @@ fn toggle_panel(app: &AppHandle, rect: Option<&tauri::Rect>) {
     let x = (px - PANEL_W / 2.0).max(8.0);
     let y = if py > 400.0 { py - panel_h - 46.0 } else { py + 6.0 };
     let _ = window.set_position(tauri::LogicalPosition::new(x, y));
-    let _ = window.show();
-    let _ = window.set_focus();
+    if let Some(state) = app.try_state::<AppState>() {
+        if let Ok(mut t) = state.panel_shown_at.lock() {
+            *t = Some(std::time::Instant::now());
+        }
+    }
+    mac_window::show_panel(app);
+    debug_log::log(&format!("panel shown at ({:.0}, {:.0})", x, y));
     let _ = app.emit("panel-opened", ());
 }
 
@@ -217,11 +227,13 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_nspanel_init())
         .manage(AppState {
             snapshot: Mutex::new(None),
             update_badge: AtomicBool::new(false),
             update_version: Mutex::new(None),
             last_toggle: Mutex::new(None),
+            panel_shown_at: Mutex::new(None),
         })
         .invoke_handler(tauri::generate_handler![
             get_limits,
@@ -237,6 +249,13 @@ pub fn run() {
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
             build_tray(app)?;
+
+            if let Some(window) = app.get_webview_window("panel") {
+                if let Err(e) = mac_window::setup_panel(&window) {
+                    debug_log::log(&format!("panel setup failed: {}", e));
+                }
+            }
+            mac_window::dismiss_on_outside_click(handle.clone());
 
             // First paint before the first poll tick.
             refresh(&handle);
@@ -279,9 +298,18 @@ pub fn run() {
                 return;
             }
             match event {
-                // The panel is a popover: focus elsewhere puts it away.
+                // The panel is a popover: focus elsewhere puts it away. The
+                // blur that lands right after showing is not "elsewhere" — it
+                // is the click or the closing tray menu taking its focus back.
                 tauri::WindowEvent::Focused(false) => {
-                    let _ = window.hide();
+                    let fresh = window
+                        .app_handle()
+                        .try_state::<AppState>()
+                        .and_then(|s| s.panel_shown_at.lock().ok().and_then(|t| *t))
+                        .is_some_and(|t| t.elapsed().as_millis() < 700);
+                    if !fresh {
+                        let _ = window.hide();
+                    }
                 }
                 // Closing must hide, never destroy — a destroyed panel cannot
                 // be shown again and the tray icon would look dead.
@@ -300,9 +328,6 @@ pub fn run() {
 /// then quit. The panel itself hangs on the left click.
 fn build_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let update = MenuItem::with_id(app, "update", "Check for updates", true, None::<&str>)?;
-    // Menu route to the panel: tray click events are flaky across macOS
-    // versions, and a panel only reachable by a dead gesture is a dead panel.
-    let show = MenuItem::with_id(app, "panel", "Show limits", true, None::<&str>)?;
     let version = MenuItem::with_id(
         app,
         "version",
@@ -314,8 +339,6 @@ fn build_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
     let menu = MenuBuilder::new(app)
         .item(&update)
-        .separator()
-        .item(&show)
         .separator()
         .item(&version)
         .item(&quit)
@@ -345,7 +368,6 @@ fn build_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                     on_update_clicked(app).await;
                 });
             }
-            "panel" => toggle_panel(app, None),
             "quit" => app.exit(0),
             _ => {}
         })
@@ -387,6 +409,19 @@ async fn on_update_clicked(app: AppHandle) {
         Ok(None) => debug_log::log("update: up to date"),
         Err(e) => debug_log::log(&format!("update: check failed: {}", e)),
     }
+}
+
+#[cfg(target_os = "macos")]
+fn tauri_nspanel_init() -> tauri::plugin::TauriPlugin<tauri::Wry> {
+    tauri_nspanel::init()
+}
+
+/// The panel plugin is macOS-only; on Windows the popup is an ordinary
+/// always-on-top tool window, so this is a no-op plugin to keep one builder
+/// chain instead of two.
+#[cfg(not(target_os = "macos"))]
+fn tauri_nspanel_init() -> tauri::plugin::TauriPlugin<tauri::Wry> {
+    tauri::plugin::Builder::new("noop").build()
 }
 
 #[cfg(test)]
