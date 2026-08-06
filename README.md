@@ -40,17 +40,24 @@ exact numbers. A green dot on the icon means a Camel update is ready.
 
 <p align="center"><img src="docs/screenshots/menubar.png" width="380" alt="Menu bar states: fine, running low, update ready" /></p>
 
-## Click for the full picture
+## Click for the answer, not just the numbers
 
-Both windows, how much is left, when each resets, and how fresh the data is. A
-window that has already come back says so instead of counting down to a reset
-that happened hours ago.
+"How much is left" is what the bars are for. The question you actually open a
+window for is the next one — *will I make it to the reset?* Camel watches the
+last twenty minutes and says where that pace lands.
 
-<p align="center"><img src="docs/screenshots/panel.png" width="320" alt="The panel" /></p>
+<p align="center"><img src="docs/screenshots/panel-pace.png" width="320" alt="On pace to run out at 13:40, 35 min early" /></p>
 
-When a window runs low, the panel says so in colour:
+When the pace is fine, it says that too, and when nothing is being spent it
+says that. Under three minutes of history it says nothing at all rather than
+guess.
 
-<p align="center"><img src="docs/screenshots/low.png" width="320" alt="Running low" /></p>
+<p align="center"><img src="docs/screenshots/panel-overview.png" width="320" alt="On pace to last the window" /></p>
+
+A window that has already come back says so, instead of counting down to a
+reset that happened hours ago.
+
+<p align="center"><img src="docs/screenshots/panel-refilled.png" width="320" alt="Refilled today at 10:28" /></p>
 
 ## Where the numbers come from
 
@@ -68,13 +75,18 @@ fi
 No statusline yet? Run `/statusline` in Claude Code and ask it to save its
 input JSON to `~/.claude/statusline-last.json`.
 
+Until that file exists, Camel says so and offers the way out — it never shows
+a zero it doesn't have.
+
+<p align="center"><img src="docs/screenshots/panel-setup.png" width="320" alt="No limit data yet, with a setup button" /></p>
+
 ## Updates
 
 When the camel's icon grows a green dot, an update is ready — click the icon
 and install from the panel, or right-click → **Update to vX.Y.Z**. Done in
 seconds, settings survive.
 
-<p align="center"><img src="docs/screenshots/update.png" width="320" alt="Update ready" /></p>
+<p align="center"><img src="docs/screenshots/panel-update.png" width="320" alt="Update ready" /></p>
 
 ## Privacy
 

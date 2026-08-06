@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.7 — 2026-08-06
+## 0.1.8 — 2026-08-06
 
 Design critique of the panel (`/impeccable critique`, scored 20/40) turned up
 three things the panel was getting wrong at exactly the moments it is trusted

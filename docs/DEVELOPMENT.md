@@ -13,6 +13,7 @@ src/camel.png         master icon; `npx tauri icon src/camel.png` rebuilds icons
 src-tauri/src/
   lib.rs              setup, tray, panel window, commands, pollers
   limits.rs           reads/parses ~/.claude/statusline-last.json — cargo tests
+  pace.rs             twenty-minute sample buffer → burn-rate forecast — cargo tests
   tray_icon.rs        runtime-drawn bar icon + update badge — cargo tests
   private.rs          0600/0700 file writes (the debug log goes through it)
   debug_log.rs        fresh-per-launch event log in the app data dir
@@ -23,11 +24,48 @@ src-tauri/src/
 `$HOME/.claude/statusline-last.json`, written by the user's Claude Code
 statusline script. Camel polls it every 30 s (mtime first), interprets
 `rate_limits.{five_hour,seven_day}.{used_percentage,resets_at}` and shows
-*remaining* percent. A window whose `resets_at` is already in the past renders
-as full — the quota refreshed, only no session has rewritten the file since.
+*remaining* percent.
 
-Missing file or `rate_limits: null` → grey bars and the panel's empty state,
-never zeros.
+Reading the file has three outcomes, not two (`limits::Reading`): `Ok`,
+`Missing` (no file — the status line has never written one) and `Unreadable`
+(a file with nothing we can parse). The panel says something different for
+each; collapsing the last two into one screen is how a first-time user ends up
+following instructions that cannot work.
+
+A window whose `resets_at` has passed is reported full and flagged `refilled`:
+the quota did come back, and the timestamp in the file now names that refill
+rather than a future event. Without the flag the panel counted down to a
+moment in the past, forever, in confident green.
+
+## Pace
+
+`pace.rs` keeps the last 20 minutes of readings and takes the slope. Under
+`MIN_SPAN_SECS` of history it returns `Unknown` and the panel shows no verdict
+at all — a forecast from two samples is a guess wearing a number. A reading
+that jumps upward is a refill, not negative spending, so it clears the buffer.
+
+The verdict crosses to the webview as data (`Idle` / `Safe` / `RunsOut`); the
+sentence is built in `format.js`, like every other string in the panel.
+
+## Panel size
+
+The window takes the height the page reports (`contentHeight()` → the
+`fit_panel` command). The constants in `lib.rs` are only a first guess so the
+window opens at roughly the right size. Height kept by hand in Rust is how the
+footer got cut off the first time a verdict wrapped to two lines: the page has
+`overflow: hidden` and no scrollbar, so clipping is silent.
+
+## Colour
+
+Two palettes on purpose. The panel draws its own dark surface, so its text and
+fills are tuned against `#1b1f26` — the critical percentage and the freshness
+line both sat below WCAG AA before and were repalletted. The tray icon sits on
+a menu bar that may be light or dark, so it keeps mid-tone colours that survive
+both. Aligning them would cost legibility on a light menu bar.
+
+The bar track is as light as it can be while every fill still clears 3:1
+against it: fill-versus-track is where "how much is left" is actually read, so
+it wins over the track's own contrast with the card.
 
 ## Run & test
 
@@ -44,11 +82,27 @@ The tray shows bars only; exact percents live in the tooltip and the panel.
 
 Taken by the app's own code, not mocked up:
 
-- Panel states: `_camel_shot.mjs` (web_eye harness) serves `src/` over http,
-  stubs `window.__TAURI__` and shoots `panel / low / update / empty`.
+- Panel states: `_camel_shot.mjs` (web_eye harness) serves `src/` over its own
+  http server, stubs `window.__TAURI__`, sizes the viewport with the app's own
+  `contentHeight()` and shoots
+  `panel / low / zero / refilled / update / empty / unreadable`.
+  ```
+  cd ~/membeme/system/tools/web_eye
+  SHOT=low OUT=~/pets/camel/docs/screenshots/panel-pace.png node _camel_shot.mjs
+  ```
 - Tray strip: `cargo test -- --ignored dump_icons` writes the real rendered
   RGBA icons to `target/icon-dump/`; a small PIL script composes them onto a
   menu-bar background.
+
+Two rules learned the hard way:
+
+- **Fixture times are relative to `now`, never wall-clock.** An absolute
+  "17:30" rolls to tomorrow when the shot is taken in the evening, and the
+  README then showed a 5-hour window resetting 23 hours out. The harness
+  asserts the 5-hour reset is within five hours.
+- **A replaced screenshot needs a new filename.** GitHub serves images through
+  a caching proxy keyed by URL, so new pixels under an old name keep showing
+  the old picture for weeks.
 
 ## CI / release
 
