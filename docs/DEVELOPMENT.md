@@ -94,7 +94,7 @@ Taken by the app's own code, not mocked up:
   `panel / low / zero / refilled / update / empty / unreadable`.
   ```
   cd ~/membeme/system/tools/web_eye
-  SHOT=low OUT=~/pets/camel/docs/screenshots/panel-low.png node _camel_shot.mjs
+  SHOT=low OUT=~/pets/camel/docs/screenshots/panel-rows-low.png node _camel_shot.mjs
   ```
 - Tray strip: `cargo test -- --ignored dump_icons` writes the real rendered
   RGBA icons to `target/icon-dump/`; a small PIL script composes them onto a

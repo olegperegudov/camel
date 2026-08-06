@@ -32,7 +32,7 @@ const PANEL_W: f64 = 320.0;
 /// window would show dead air above the footer the rest of the time.
 /// A first guess only, so the window opens at about the right size — the page
 /// measures itself and calls `fit_panel` with the truth a frame later.
-const PANEL_H: f64 = 170.0;
+const PANEL_H: f64 = 130.0;
 const UPDATE_ROW_H: f64 = 48.0;
 
 /// Where the panel's "how do I set this up?" button lands: the README section

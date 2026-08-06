@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.12 — 2026-08-06
+
+- The window name moved onto the line's row: `5h ——————— 2h`. Stacking it above
+  cost the panel twice its height for two characters, and the panel is a
+  popover — every pixel it spends is somebody's screen it covers. Roughly half
+  as tall now, with nothing dropped. The names sit in a fixed-width column so
+  both lines start at the same x and their lengths stay comparable.
+
 ## 0.1.11 — 2026-08-06
 
 The panel is down to what it is actually read for: one line per window, its

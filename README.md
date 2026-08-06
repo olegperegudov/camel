@@ -46,17 +46,17 @@ One line per window. The length of the line is what's left, and next to it is
 how long that has to last. Nothing else — no percentages to decode, no reset
 times to subtract in your head.
 
-<p align="center"><img src="docs/screenshots/panel-limits.png" width="320" alt="5h with a long green line and 2h beside it, 7d with a longer one and 4d" /></p>
+<p align="center"><img src="docs/screenshots/panel-rows.png" width="320" alt="5h with a long green line and 2h beside it, 7d with a longer one and 4d" /></p>
 
 The colour changes on its own: yellow once half the window is gone, red at
 three quarters. A short red line next to a small number is the whole warning.
 
-<p align="center"><img src="docs/screenshots/panel-low.png" width="320" alt="5h nearly spent, 47m left; 7d yellow with 4d" /></p>
+<p align="center"><img src="docs/screenshots/panel-rows-low.png" width="320" alt="5h nearly spent, 47m left; 7d yellow with 4d" /></p>
 
 A window that has already come back shows full, with a dash where the
 countdown would be — nothing has scheduled the next reset yet.
 
-<p align="center"><img src="docs/screenshots/panel-back.png" width="320" alt="5h full with a dash instead of a countdown" /></p>
+<p align="center"><img src="docs/screenshots/panel-rows-back.png" width="320" alt="5h full with a dash instead of a countdown" /></p>
 
 ## Where the numbers come from
 
@@ -85,7 +85,7 @@ When the camel's icon grows a green dot, an update is ready — click the icon
 and install from the panel, or right-click → **Update to vX.Y.Z**. Done in
 seconds, settings survive.
 
-<p align="center"><img src="docs/screenshots/panel-ready.png" width="320" alt="Update ready" /></p>
+<p align="center"><img src="docs/screenshots/panel-rows-update.png" width="320" alt="Update ready" /></p>
 
 ## Privacy
 

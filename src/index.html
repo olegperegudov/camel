@@ -8,22 +8,18 @@
 <body>
   <main class="panel">
     <section id="rows" hidden>
+      <!-- Name, line, time on one row: the reading is three things wide and
+           one thing tall. The words a screen reader needs live in the label,
+           since "5h" alone says nothing out loud. -->
       <div class="row" id="row-five">
-        <div class="name">5h</div>
-        <!-- The bar is the whole reading: its length is what's left, its colour
-             how bad that is. The words a screen reader needs live in the label,
-             since "5h" alone says nothing out loud. -->
-        <div class="line">
-          <span class="bar" role="progressbar" aria-label="last 5 hours" aria-valuemin="0" aria-valuemax="100"></span>
-          <span class="until"></span>
-        </div>
+        <span class="name">5h</span>
+        <span class="bar" role="progressbar" aria-label="last 5 hours" aria-valuemin="0" aria-valuemax="100"></span>
+        <span class="until"></span>
       </div>
       <div class="row" id="row-seven">
-        <div class="name">7d</div>
-        <div class="line">
-          <span class="bar" role="progressbar" aria-label="last 7 days" aria-valuemin="0" aria-valuemax="100"></span>
-          <span class="until"></span>
-        </div>
+        <span class="name">7d</span>
+        <span class="bar" role="progressbar" aria-label="last 7 days" aria-valuemin="0" aria-valuemax="100"></span>
+        <span class="until"></span>
       </div>
     </section>
     <section id="empty" hidden>

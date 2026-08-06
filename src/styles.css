@@ -14,9 +14,9 @@ html, body {
 /* The panel floats over someone else's screen, so the surface is opaque:
    translucency is only for windows that sit over our own backdrop. */
 .panel {
-  /* How long a full bar is. The window is 320 wide, so 220 leaves room for
-     the time to sit beside a bar that has not been spent at all. */
-  --track: 220px;
+  /* How long a full bar is. The window is 320 wide; the name to the left and
+     the longest countdown to the right take the rest. */
+  --track: 176px;
   box-sizing: border-box;
   /* min-height, not height: the window is sized to this box, and a wrapped
      line has to make the box taller rather than be cut off by it. */
@@ -38,21 +38,22 @@ html, body {
 #rows {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
+/* Name, line and time on one row. Stacking them cost the panel twice its
+   height for two characters of label. */
 .row {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.name { font-weight: 600; }
-
-.line {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+/* Fixed width so both lines start at the same x — ragged starts would make
+   the two lengths impossible to compare against each other. */
+.name {
+  font-weight: 600;
+  flex: 0 0 22px;
 }
 
 /* No track behind the bar: the empty part of a window is not information, and
