@@ -26,7 +26,7 @@ function paintRow(rowId, win, now) {
   const row = document.getElementById(rowId);
   const lvl = levelOf(win.remaining);
   const left = row.querySelector('.left');
-  left.textContent = `${win.remaining}%`;
+  left.querySelector('.pct').textContent = `${win.remaining}%`;
   const bar = row.querySelector('.bar');
   bar.setAttribute('aria-valuenow', win.remaining);
   bar.setAttribute('aria-valuetext', `${win.remaining}% left`);
@@ -63,7 +63,8 @@ async function render() {
   document.getElementById('version').textContent = `Camel v${data.version}`;
   const update = document.getElementById('update');
   update.hidden = !data.update;
-  if (data.update) update.textContent = `Update to v${data.update} — install`;
+  // Same words as the tray menu item: one action, one name for it.
+  if (data.update) update.textContent = `Update to v${data.update}`;
 }
 
 document.getElementById('update').addEventListener('click', () => {

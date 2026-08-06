@@ -34,7 +34,7 @@ After downloading:
 
 ## Two bars, zero clicks
 
-The left bar is your 5-hour window, the right one is your week. Green means
+The left bar is your last 5 hours, the right one your last 7 days. Green means
 plenty, yellow means half is gone, red means three quarters are. Hover for the
 exact numbers. A green dot on the icon means a Camel update is ready.
 
@@ -42,7 +42,9 @@ exact numbers. A green dot on the icon means a Camel update is ready.
 
 ## Click for the full picture
 
-Both windows, how much is left, when each resets, and how fresh the data is.
+Both windows, how much is left, when each resets, and how fresh the data is. A
+window that has already come back says so instead of counting down to a reset
+that happened hours ago.
 
 <p align="center"><img src="docs/screenshots/panel.png" width="320" alt="The panel" /></p>
 

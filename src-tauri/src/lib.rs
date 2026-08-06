@@ -146,9 +146,10 @@ fn apply_tray(app: &AppHandle) {
                 debug_log::log(&format!("tray: set_icon failed: {}", e));
             }
             // Bars only in the bar itself; the numbers live one hover away.
+            // Same window names as the panel — one vocabulary, three surfaces.
             let tip = match snapshot {
                 Some(s) => format!(
-                    "Camel — 5h {}% · week {}% left",
+                    "Camel — last 5 hours: {}% left · last 7 days: {}% left",
                     s.five_hour.remaining, s.seven_day.remaining
                 ),
                 None => "Camel — no limit data yet".to_string(),

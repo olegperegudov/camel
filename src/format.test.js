@@ -15,13 +15,17 @@ describe('levelOf mirrors the status line thresholds', () => {
 });
 
 describe('resetWhen', () => {
+  const at1730 = Math.floor(new Date(2026, 7, 5, 17, 30).getTime() / 1000);
+
   test('same day says today', () => {
-    const at1730 = Math.floor(new Date(2026, 7, 5, 17, 30).getTime() / 1000);
-    expect(resetWhen(at1730, NOW)).toBe('resets today at 17:30');
+    expect(resetWhen(at1730, NOW, false)).toBe('resets today at 17:30');
   });
   test('another day names the weekday', () => {
     const thu0100 = Math.floor(new Date(2026, 7, 6, 1, 0).getTime() / 1000);
-    expect(resetWhen(thu0100, NOW)).toBe('resets Thu at 01:00');
+    expect(resetWhen(thu0100, NOW, false)).toBe('resets Thu at 01:00');
+  });
+  test('a 12-hour machine gets a 12-hour clock', () => {
+    expect(resetWhen(at1730, NOW, true)).toBe('resets today at 05:30 pm');
   });
 });
 
@@ -35,10 +39,20 @@ describe('refilledWhen', () => {
 });
 
 describe('resetIn', () => {
-  test('minutes under an hour, hours under two days, then days', () => {
+  test('minutes under an hour, hours and minutes under a day, then days', () => {
     expect(resetIn(NOW + 40 * 60, NOW)).toBe('in 40 min');
-    expect(resetIn(NOW + 3 * 3600, NOW)).toBe('in 3 h');
+    expect(resetIn(NOW + 3 * 3600, NOW)).toBe('in 3h');
     expect(resetIn(NOW + 3 * 86400, NOW)).toBe('in 3 d');
+  });
+  test('an hour and a half is not two hours', () => {
+    // Rounding 91 minutes up handed the user 29 minutes of a five-hour
+    // budget that were never there.
+    expect(resetIn(NOW + 91 * 60, NOW)).toBe('in 1h 31m');
+    expect(resetIn(NOW + 59 * 60, NOW)).toBe('in 59 min');
+  });
+  test('nothing rounds up: a countdown never promises time it does not have', () => {
+    expect(resetIn(NOW + 59, NOW)).toBe('in 0 min');
+    expect(resetIn(NOW + (2 * 86400 - 60), NOW)).toBe('in 1 d');
   });
   test('a reset in the past does not go negative', () => {
     expect(resetIn(NOW - 600, NOW)).toBe('in 0 min');

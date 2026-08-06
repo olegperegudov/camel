@@ -26,6 +26,16 @@ most. All three are fixed here.
 - The update button had no visible keyboard focus; both buttons now show a
   focus ring. The bars carry `role="progressbar"` so a screen reader gets the
   geometry, not just the digits.
+- One vocabulary across tray, panel and README: the windows are "last 5 hours"
+  and "last 7 days" everywhere ("Week" implied a Monday reset on a window that
+  rolls), and the percentage now says what it is a percentage of — "73% left".
+  Every bar the user has ever seen fills up as things get worse; this one
+  drains, and the noun is what disambiguates it.
+- The countdown stopped rounding up: 91 minutes read "in 2 h", which hands the
+  user 29 minutes of a five-hour budget that don't exist. It now truncates and
+  shows both parts — "in 1h 31m".
+- The clock follows the machine: a US user with a 12-hour Mac was shown 17:30
+  because the format was pinned to 24-hour.
 
 ## 0.1.6 — 2026-08-05
 

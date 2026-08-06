@@ -9,15 +9,17 @@
   <main class="panel">
     <section id="rows" hidden>
       <div class="row" id="row-five">
-        <div class="top"><span class="name">5-hour window</span><span class="left"></span></div>
+        <!-- "left", not a bare percent: every progress bar the user has ever
+             seen fills up as things get worse, and this one drains. -->
+        <div class="top"><span class="name">Last 5 hours</span><span class="left"><span class="pct"></span><span class="unit">left</span></span></div>
         <!-- The bar carries the same reading as the number, so a screen reader
              gets the geometry too, not just the digits. -->
-        <div class="bar" role="progressbar" aria-label="5-hour window" aria-valuemin="0" aria-valuemax="100"><span></span></div>
+        <div class="bar" role="progressbar" aria-label="Last 5 hours" aria-valuemin="0" aria-valuemax="100"><span></span></div>
         <div class="reset"><span class="when"></span><span class="in"></span></div>
       </div>
       <div class="row" id="row-seven">
-        <div class="top"><span class="name">Week</span><span class="left"></span></div>
-        <div class="bar" role="progressbar" aria-label="Weekly window" aria-valuemin="0" aria-valuemax="100"><span></span></div>
+        <div class="top"><span class="name">Last 7 days</span><span class="left"><span class="pct"></span><span class="unit">left</span></span></div>
+        <div class="bar" role="progressbar" aria-label="Last 7 days" aria-valuemin="0" aria-valuemax="100"><span></span></div>
         <div class="reset"><span class="when"></span><span class="in"></span></div>
       </div>
     </section>

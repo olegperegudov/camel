@@ -51,6 +51,14 @@ html, body {
   font-variant-numeric: tabular-nums;
 }
 
+/* The noun rides along without competing with the number. */
+.left .unit {
+  margin-left: 4px;
+  font-weight: 400;
+  font-size: 12px;
+  color: #9aa1ac;
+}
+
 /* The track is as light as it can be while every fill still clears 3:1
    against it — that boundary is where "how much is left" is actually read,
    so it wins over the track's own contrast with the card. */
