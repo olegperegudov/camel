@@ -77,7 +77,11 @@ describe('paceLine', () => {
     expect(paceLine({ state: 'steady', minutes: 12 }, NOW).text)
       .toBe('Steady — no drop in the last 12 min');
   });
-  test('too little history shows no line at all', () => {
+  test('while it is still counting it says so — an update restarts the app', () => {
+    expect(paceLine({ state: 'warming', seconds_left: 120 }, NOW).text)
+      .toBe('Working out your pace — 2 min to go');
+  });
+  test('with no readings at all there is no line', () => {
     expect(paceLine({ state: 'unknown' }, NOW)).toBeNull();
   });
 });

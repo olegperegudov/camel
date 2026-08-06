@@ -44,8 +44,12 @@ impl Sample {
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 #[serde(tag = "state", rename_all = "snake_case")]
 pub enum Pace {
-    /// Not enough history yet to say anything honest.
+    /// No readings at all — nothing to say and nothing to promise.
     Unknown,
+    /// Readings are coming in but the span is still too short to draw a line
+    /// through. Announced rather than hidden: an update restarts the app, so
+    /// silence here lands exactly when someone goes looking for what changed.
+    Warming { seconds_left: i64 },
     /// The level is not falling across everything we can see — either nobody
     /// is working, or usage is ageing out as fast as it arrives.
     Steady { minutes: i64 },
@@ -79,7 +83,7 @@ pub fn of(history: &VecDeque<Sample>, snap: &Snapshot, now: i64) -> Pace {
     };
     let span = last.at - first.at;
     if span < MIN_SPAN_SECS {
-        return Pace::Unknown;
+        return Pace::Warming { seconds_left: MIN_SPAN_SECS - span };
     }
 
     // saturating_sub, so a window that recovered over the span counts as no
@@ -147,11 +151,18 @@ mod tests {
     }
 
     #[test]
-    fn too_little_history_says_nothing_rather_than_guessing() {
+    fn too_little_history_says_it_is_still_counting_rather_than_guessing() {
         let mut h = VecDeque::new();
         push(&mut h, sample(1000, 80, 90));
         push(&mut h, sample(1060, 79, 90));
-        assert_eq!(of(&h, &snap(79, FIVE_RESET, 90, SEVEN_RESET), 1060), Pace::Unknown);
+        assert_eq!(
+            of(&h, &snap(79, FIVE_RESET, 90, SEVEN_RESET), 1060),
+            Pace::Warming { seconds_left: MIN_SPAN_SECS - 60 }
+        );
+    }
+
+    #[test]
+    fn no_readings_at_all_promises_nothing() {
         assert_eq!(of(&VecDeque::new(), &snap(80, FIVE_RESET, 90, SEVEN_RESET), 1000), Pace::Unknown);
     }
 
@@ -213,7 +224,10 @@ mod tests {
             Sample { at: 1660, five: 100, seven: 90, five_reset: FIVE_RESET + 5 * 3600, seven_reset: SEVEN_RESET },
         );
         assert_eq!(h.len(), 1);
-        assert_eq!(of(&h, &snap(100, FIVE_RESET + 5 * 3600, 90, SEVEN_RESET), 1660), Pace::Unknown);
+        assert!(matches!(
+            of(&h, &snap(100, FIVE_RESET + 5 * 3600, 90, SEVEN_RESET), 1660),
+            Pace::Warming { .. }
+        ));
     }
 
     #[test]

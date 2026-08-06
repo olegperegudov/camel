@@ -81,6 +81,12 @@ function shortWhen(secs, nowSecs, hour12) {
 // of the miss, in the same two-column rhythm as the reset row below it.
 export function paceLine(pace, nowSecs, hour12 = systemUses12Hour()) {
   switch (pace.state) {
+    case 'warming':
+      return {
+        text: `Working out your pace — ${duration(pace.seconds_left)} to go`,
+        aside: '',
+        level: 'calm',
+      };
     // Not "idle": these windows roll, so a level that holds may mean nobody is
     // working *or* that usage is ageing out as fast as it arrives. The panel
     // reports what it can see — the level — not a guess about the person.

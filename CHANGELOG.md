@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.10 — 2026-08-06
+
+- The forecast says it is still counting instead of showing nothing. An update
+  restarts the app, which empties the sample buffer — so the first three
+  minutes after every update, the moment someone goes looking for what
+  changed, the new line was simply absent and the release looked like it had
+  done nothing. It now reads "Working out your pace — 2 min to go", and only a
+  reading-less app shows no line at all.
+
 ## 0.1.9 — 2026-08-06
 
 - Fix, caught by watching the forecast against live data: these windows
