@@ -64,12 +64,6 @@ pub fn level(remaining: u8) -> Level {
     }
 }
 
-/// The window closer to exhaustion — the one number worth showing next to the
-/// tray icon.
-pub fn worst(s: &Snapshot) -> u8 {
-    s.five_hour.remaining.min(s.seven_day.remaining)
-}
-
 /// Where Claude Code's status line data lives, on any OS. The path is derived
 /// from the OS home dir — never spelled out.
 pub fn source_path() -> Option<PathBuf> {
@@ -181,12 +175,6 @@ mod tests {
         assert_eq!(parse(r#"{"rate_limits": null}"#, 1, 2), None);
         assert_eq!(parse("not json", 1, 2), None);
         assert_eq!(parse("{}", 1, 2), None);
-    }
-
-    #[test]
-    fn the_worst_window_is_the_one_shown_in_the_bar() {
-        let s = parse(RAW, 100, 1000).unwrap();
-        assert_eq!(worst(&s), 73);
     }
 
     #[test]

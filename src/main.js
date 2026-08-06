@@ -2,7 +2,7 @@
 // visible. All numbers come pre-interpreted (remaining, not used) — the panel
 // only formats.
 
-import { age, levelOf, refilledWhen, resetIn, resetWhen } from './format.js';
+import { age, levelOf, paceLine, refilledWhen, resetIn, resetWhen } from './format.js';
 
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
@@ -50,6 +50,14 @@ async function render() {
   const s = reading.state === 'ok' ? reading.snapshot : null;
   document.getElementById('rows').hidden = !s;
   document.getElementById('empty').hidden = !!s;
+  const pace = document.getElementById('pace');
+  const verdict = s ? paceLine(data.pace, data.now) : null;
+  pace.hidden = !verdict;
+  if (verdict) {
+    pace.querySelector('.what').textContent = verdict.text;
+    pace.querySelector('.aside').textContent = verdict.aside;
+    pace.className = verdict.level;
+  }
   if (s) {
     paintRow('row-five', s.five_hour, data.now);
     paintRow('row-seven', s.seven_day, data.now);
@@ -65,6 +73,22 @@ async function render() {
   update.hidden = !data.update;
   // Same words as the tray menu item: one action, one name for it.
   if (data.update) update.textContent = `Update to v${data.update}`;
+  invoke('fit_panel', { height: contentHeight() });
+}
+
+// The window takes the height of what the panel actually contains. It used to
+// be a constant kept by hand in Rust, and the first line of copy that wrapped
+// was clipped silently — there is no scrollbar here to reveal it.
+export function contentHeight() {
+  const panel = document.querySelector('.panel');
+  const css = getComputedStyle(panel);
+  const px = (v) => parseFloat(v) || 0;
+  const kids = [...panel.children].filter((el) => !el.hidden);
+  const stack = kids.reduce((sum, el) => sum + el.getBoundingClientRect().height, 0);
+  const gaps = px(css.rowGap) * Math.max(0, kids.length - 1);
+  const frame =
+    px(css.paddingTop) + px(css.paddingBottom) + px(css.borderTopWidth) + px(css.borderBottomWidth);
+  return Math.ceil(stack + gaps + frame);
 }
 
 document.getElementById('update').addEventListener('click', () => {

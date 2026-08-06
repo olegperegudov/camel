@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { age, levelOf, refilledWhen, resetIn, resetWhen } from './format.js';
+import { age, levelOf, paceLine, refilledWhen, resetIn, resetWhen } from './format.js';
 
 // Wed 2026-08-05 14:32 local — an anchor mid-day, away from midnight edges.
 const NOW = Math.floor(new Date(2026, 7, 5, 14, 32).getTime() / 1000);
@@ -56,6 +56,28 @@ describe('resetIn', () => {
   });
   test('a reset in the past does not go negative', () => {
     expect(resetIn(NOW - 600, NOW)).toBe('in 0 min');
+  });
+});
+
+describe('paceLine', () => {
+  const at1812 = Math.floor(new Date(2026, 7, 5, 18, 12).getTime() / 1000);
+
+  test('a pace that runs out names the clock time and how early', () => {
+    expect(
+      paceLine({ state: 'runs_out', window: 'five_hour', at: at1812, before_reset: 40 * 60 }, NOW, false)
+    ).toEqual({ text: 'On pace to run out at 18:12', aside: '40 min early', level: 'warn' });
+  });
+  test('the weekly window says so, and names the day when it is not today', () => {
+    const thu = Math.floor(new Date(2026, 7, 6, 9, 15).getTime() / 1000);
+    expect(paceLine({ state: 'runs_out', window: 'seven_day', at: thu, before_reset: 2 * 86400 }, NOW, false))
+      .toEqual({ text: 'Weekly limit runs out Thu at 09:15', aside: '2 d early', level: 'warn' });
+  });
+  test('safe and idle are calm, and say something rather than nothing', () => {
+    expect(paceLine({ state: 'safe' }, NOW).level).toBe('calm');
+    expect(paceLine({ state: 'idle', minutes: 12 }, NOW).text).toBe('Idle — nothing spent in 12 min');
+  });
+  test('too little history shows no line at all', () => {
+    expect(paceLine({ state: 'unknown' }, NOW)).toBeNull();
   });
 });
 

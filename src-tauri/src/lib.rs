@@ -10,9 +10,11 @@
 mod debug_log;
 mod limits;
 mod mac_window;
+mod pace;
 mod private;
 mod tray_icon;
 
+use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use tauri::{
@@ -27,11 +29,14 @@ use tauri_plugin_updater::UpdaterExt;
 const POLL_SECS: u64 = 30;
 
 const PANEL_W: f64 = 320.0;
-/// Sized to the content: the update row only exists when a release is waiting,
-/// and a fixed tall window would show dead air above the footer the rest of
-/// the time.
+/// Sized to the content: neither the pace line nor the update row is always
+/// there, and a fixed tall window would show dead air above the footer the
+/// rest of the time.
+/// A first guess only, so the window opens at about the right size — the page
+/// measures itself and calls `fit_panel` with the truth a frame later.
 const PANEL_H: f64 = 200.0;
-const PANEL_H_WITH_UPDATE: f64 = 248.0;
+const PACE_ROW_H: f64 = 32.0;
+const UPDATE_ROW_H: f64 = 48.0;
 
 /// Where the panel's "how do I set this up?" button lands: the README section
 /// with the two lines a status line needs.
@@ -39,6 +44,9 @@ const SETUP_GUIDE: &str = "https://github.com/olegperegudov/camel#where-the-numb
 
 struct AppState {
     reading: Mutex<limits::Reading>,
+    /// The last twenty minutes of readings — the only thing the app
+    /// remembers, and what lets it answer "will I make it".
+    history: Mutex<VecDeque<pace::Sample>>,
     update_badge: AtomicBool,
     update_version: Mutex<Option<String>>,
     /// macOS delivers tray clicks inconsistently across versions — some send
@@ -64,10 +72,21 @@ fn get_limits(state: tauri::State<AppState>) -> serde_json::Value {
     let update = state.update_version.lock().ok().and_then(|g| g.clone());
     serde_json::json!({
         "reading": reading,
+        "pace": current_pace(&state),
         "now": limits::now_secs(),
         "version": env!("CARGO_PKG_VERSION"),
         "update": update,
     })
+}
+
+/// Where the burn rate leads, given what the app has seen so far.
+fn current_pace(state: &AppState) -> pace::Pace {
+    let (Ok(limits::Reading::Ok(snap)), Ok(history)) =
+        (state.reading.lock().map(|g| *g), state.history.lock())
+    else {
+        return pace::Pace::Unknown;
+    };
+    pace::of(&history, &snap, limits::now_secs())
 }
 
 /// The panel asks for the setup guide; it never names a URL. Anything the
@@ -88,6 +107,16 @@ fn js_log(message: String) {
 #[tauri::command]
 fn hide_panel(app: AppHandle) {
     mac_window::hide_panel(&app);
+}
+
+/// The panel reports what it actually contains and the window takes that
+/// height. The constants below are only a first guess so the window opens at
+/// roughly the right size; the page is the authority, because a height kept
+/// by hand clips silently the first time a line of copy wraps.
+#[tauri::command]
+fn fit_panel(app: AppHandle, height: f64) {
+    let Some(window) = app.get_webview_window("panel") else { return };
+    let _ = window.set_size(tauri::LogicalSize::new(PANEL_W, height.clamp(120.0, 520.0)));
 }
 
 #[tauri::command]
@@ -120,6 +149,13 @@ fn refresh(app: &AppHandle) {
         }
         Err(_) => false,
     };
+    // Sampled on every poll, not only when the numbers moved: a stretch where
+    // nothing changed is exactly what tells the panel the user is idle.
+    if let limits::Reading::Ok(snap) = fresh {
+        if let Ok(mut history) = state.history.lock() {
+            pace::push(&mut history, pace::Sample::of(&snap, limits::now_secs()));
+        }
+    }
     if changed {
         apply_tray(app);
         let _ = app.emit("limits-changed", ());
@@ -203,11 +239,10 @@ fn toggle_panel(app: &AppHandle, rect: Option<&tauri::Rect>) {
     let panel_h = app
         .try_state::<AppState>()
         .map(|s| {
-            if s.update_badge.load(Ordering::Relaxed) {
-                PANEL_H_WITH_UPDATE
-            } else {
-                PANEL_H
-            }
+            let pace_row = current_pace(&s) != pace::Pace::Unknown;
+            PANEL_H
+                + if pace_row { PACE_ROW_H } else { 0.0 }
+                + if s.update_badge.load(Ordering::Relaxed) { UPDATE_ROW_H } else { 0.0 }
         })
         .unwrap_or(PANEL_H);
     let _ = window.set_size(tauri::LogicalSize::new(PANEL_W, panel_h));
@@ -253,6 +288,7 @@ pub fn run() {
         .plugin(tauri_nspanel_init())
         .manage(AppState {
             reading: Mutex::new(limits::Reading::Missing),
+            history: Mutex::new(VecDeque::new()),
             update_badge: AtomicBool::new(false),
             update_version: Mutex::new(None),
             last_toggle: Mutex::new(None),
@@ -262,6 +298,7 @@ pub fn run() {
             get_limits,
             js_log,
             hide_panel,
+            fit_panel,
             install_update,
             open_setup_guide
         ])

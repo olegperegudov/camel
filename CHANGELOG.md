@@ -37,6 +37,27 @@ most. All three are fixed here.
 - The clock follows the machine: a US user with a 12-hour Mac was shown 17:30
   because the format was pinned to 24-hour.
 
+### The panel answers the question it exists for
+
+The tray icon already says how much is left. The panel now says whether the
+current pace reaches the reset — the thing a person actually opens it to find
+out, and the one answer no generic usage widget could ship.
+
+- Camel re-read the file every 30 seconds and threw every previous reading
+  away. It now keeps the last twenty minutes and reads the slope: "On pace to
+  run out at 18:12 · 35 min early", "On pace to last the window", or "Idle —
+  nothing spent in 12 min". Under three minutes of history it says nothing
+  rather than guessing, and a refill starts the history over so a window
+  coming back is never read as negative spending.
+- The forecast names the window that empties first, so the weekly limit
+  running out before the 5-hour one is not a silent surprise.
+- `limits::worst()` is gone. It was the old "which window matters" answer, had
+  no caller but its own test since the tray title was dropped, and the pace
+  forecast is what replaced it.
+- The window is sized by the page, not by constants in Rust. The old height
+  was maintained by hand against copy it could not measure, and the first
+  verdict that wrapped to two lines cut the footer off.
+
 ## 0.1.6 — 2026-08-05
 
 - Left click finally opens the panel. The panel is now a non-activating
