@@ -2,19 +2,18 @@
 //!
 //! Shape of the thing: a poller reads the JSON that the user's Claude Code
 //! status line mirrors to disk, and turns it into two bars in the tray — the
-//! 5-hour window and the week, coloured by how much is left — plus the worst
-//! number as the tray title. Clicking the icon opens a small panel with the
-//! full picture: both windows, reset times, data freshness. That's all the app
-//! does: read one local file, draw. No network apart from the updater.
+//! 5-hour window and the week, coloured by how much is left; the numbers
+//! themselves live one hover away, in the tooltip. Clicking the icon opens a
+//! small panel: a bar per window, its length what is left, and beside it how
+//! long that has to last. That's all the app does: read one local file, draw.
+//! No network apart from the updater.
 
 mod debug_log;
 mod limits;
 mod mac_window;
-mod pace;
 mod private;
 mod tray_icon;
 
-use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use tauri::{
@@ -29,13 +28,11 @@ use tauri_plugin_updater::UpdaterExt;
 const POLL_SECS: u64 = 30;
 
 const PANEL_W: f64 = 320.0;
-/// Sized to the content: neither the pace line nor the update row is always
-/// there, and a fixed tall window would show dead air above the footer the
-/// rest of the time.
+/// Sized to the content: the update row is not always there, and a fixed tall
+/// window would show dead air above the footer the rest of the time.
 /// A first guess only, so the window opens at about the right size — the page
 /// measures itself and calls `fit_panel` with the truth a frame later.
-const PANEL_H: f64 = 200.0;
-const PACE_ROW_H: f64 = 32.0;
+const PANEL_H: f64 = 170.0;
 const UPDATE_ROW_H: f64 = 48.0;
 
 /// Where the panel's "how do I set this up?" button lands: the README section
@@ -44,9 +41,6 @@ const SETUP_GUIDE: &str = "https://github.com/olegperegudov/camel#where-the-numb
 
 struct AppState {
     reading: Mutex<limits::Reading>,
-    /// The last twenty minutes of readings — the only thing the app
-    /// remembers, and what lets it answer "will I make it".
-    history: Mutex<VecDeque<pace::Sample>>,
     update_badge: AtomicBool,
     update_version: Mutex<Option<String>>,
     /// macOS delivers tray clicks inconsistently across versions — some send
@@ -72,21 +66,10 @@ fn get_limits(state: tauri::State<AppState>) -> serde_json::Value {
     let update = state.update_version.lock().ok().and_then(|g| g.clone());
     serde_json::json!({
         "reading": reading,
-        "pace": current_pace(&state),
         "now": limits::now_secs(),
         "version": env!("CARGO_PKG_VERSION"),
         "update": update,
     })
-}
-
-/// Where the burn rate leads, given what the app has seen so far.
-fn current_pace(state: &AppState) -> pace::Pace {
-    let (Ok(limits::Reading::Ok(snap)), Ok(history)) =
-        (state.reading.lock().map(|g| *g), state.history.lock())
-    else {
-        return pace::Pace::Unknown;
-    };
-    pace::of(&history, &snap, limits::now_secs())
 }
 
 /// The panel asks for the setup guide; it never names a URL. Anything the
@@ -149,19 +132,8 @@ fn refresh(app: &AppHandle) {
         }
         Err(_) => false,
     };
-    // Sampled on every poll, not only when the numbers moved: a stretch where
-    // nothing changed is exactly what tells the panel the user is idle.
-    if let limits::Reading::Ok(snap) = fresh {
-        if let Ok(mut history) = state.history.lock() {
-            pace::push(&mut history, pace::Sample::of(&snap, limits::now_secs()));
-        }
-    }
     if changed {
         apply_tray(app);
-        // The forecast is the panel's headline and the panel is invisible most
-        // of the time; without this the next "the line says nothing" report
-        // would start from guesses.
-        debug_log::log(&format!("pace: {:?}", current_pace(&state)));
         let _ = app.emit("limits-changed", ());
     }
 }
@@ -242,12 +214,7 @@ fn toggle_panel(app: &AppHandle, rect: Option<&tauri::Rect>) {
     refresh(app);
     let panel_h = app
         .try_state::<AppState>()
-        .map(|s| {
-            let pace_row = current_pace(&s) != pace::Pace::Unknown;
-            PANEL_H
-                + if pace_row { PACE_ROW_H } else { 0.0 }
-                + if s.update_badge.load(Ordering::Relaxed) { UPDATE_ROW_H } else { 0.0 }
-        })
+        .map(|s| PANEL_H + if s.update_badge.load(Ordering::Relaxed) { UPDATE_ROW_H } else { 0.0 })
         .unwrap_or(PANEL_H);
     let _ = window.set_size(tauri::LogicalSize::new(PANEL_W, panel_h));
     let scale = window.scale_factor().unwrap_or(1.0);
@@ -292,7 +259,6 @@ pub fn run() {
         .plugin(tauri_nspanel_init())
         .manage(AppState {
             reading: Mutex::new(limits::Reading::Missing),
-            history: Mutex::new(VecDeque::new()),
             update_badge: AtomicBool::new(false),
             update_version: Mutex::new(None),
             last_toggle: Mutex::new(None),

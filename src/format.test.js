@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { age, levelOf, paceLine, refilledWhen, resetIn, resetWhen } from './format.js';
+import { age, duration, levelOf, resetLabel } from './format.js';
 
 // Wed 2026-08-05 14:32 local — an anchor mid-day, away from midnight edges.
 const NOW = Math.floor(new Date(2026, 7, 5, 14, 32).getTime() / 1000);
@@ -14,75 +14,35 @@ describe('levelOf mirrors the status line thresholds', () => {
   });
 });
 
-describe('resetWhen', () => {
-  const at1730 = Math.floor(new Date(2026, 7, 5, 17, 30).getTime() / 1000);
-
-  test('same day says today', () => {
-    expect(resetWhen(at1730, NOW, false)).toBe('resets today at 17:30');
-  });
-  test('another day names the weekday', () => {
-    const thu0100 = Math.floor(new Date(2026, 7, 6, 1, 0).getTime() / 1000);
-    expect(resetWhen(thu0100, NOW, false)).toBe('resets Thu at 01:00');
-  });
-  test('a 12-hour machine gets a 12-hour clock', () => {
-    expect(resetWhen(at1730, NOW, true)).toBe('resets today at 05:30 pm');
-  });
-});
-
-describe('refilledWhen', () => {
-  test('a window that already came back names the refill, not a reset', () => {
-    const earlier = Math.floor(new Date(2026, 7, 5, 9, 0).getTime() / 1000);
-    expect(refilledWhen(earlier, NOW)).toBe('refilled today at 09:00');
-    const yesterday = Math.floor(new Date(2026, 7, 4, 22, 33).getTime() / 1000);
-    expect(refilledWhen(yesterday, NOW)).toBe('refilled Tue at 22:33');
-  });
-});
-
-describe('resetIn', () => {
+describe('duration', () => {
   test('minutes under an hour, hours and minutes under a day, then days', () => {
-    expect(resetIn(NOW + 40 * 60, NOW)).toBe('in 40 min');
-    expect(resetIn(NOW + 3 * 3600, NOW)).toBe('in 3h');
-    expect(resetIn(NOW + 3 * 86400, NOW)).toBe('in 3 d');
+    expect(duration(40 * 60)).toBe('40m');
+    expect(duration(3 * 3600)).toBe('3h');
+    expect(duration(3 * 86400)).toBe('3d');
   });
   test('an hour and a half is not two hours', () => {
     // Rounding 91 minutes up handed the user 29 minutes of a five-hour
     // budget that were never there.
-    expect(resetIn(NOW + 91 * 60, NOW)).toBe('in 1h 31m');
-    expect(resetIn(NOW + 59 * 60, NOW)).toBe('in 59 min');
+    expect(duration(91 * 60)).toBe('1h 31m');
+    expect(duration(59 * 60)).toBe('59m');
   });
   test('nothing rounds up: a countdown never promises time it does not have', () => {
-    expect(resetIn(NOW + 59, NOW)).toBe('in 0 min');
-    expect(resetIn(NOW + (2 * 86400 - 60), NOW)).toBe('in 1 d');
-  });
-  test('a reset in the past does not go negative', () => {
-    expect(resetIn(NOW - 600, NOW)).toBe('in 0 min');
+    expect(duration(59)).toBe('0m');
+    expect(duration(2 * 86400 - 60)).toBe('1d');
   });
 });
 
-describe('paceLine', () => {
-  const at1812 = Math.floor(new Date(2026, 7, 5, 18, 12).getTime() / 1000);
-
-  test('a pace that runs out names the clock time and how early', () => {
-    expect(
-      paceLine({ state: 'runs_out', window: 'five_hour', at: at1812, before_reset: 40 * 60 }, NOW, false)
-    ).toEqual({ text: 'On pace to run out at 18:12', aside: '40 min early', level: 'warn' });
+describe('resetLabel', () => {
+  test('a live window counts down to its reset', () => {
+    expect(resetLabel({ remaining: 62, resets_at: NOW + 2 * 3600, refilled: false }, NOW)).toBe('2h');
   });
-  test('the weekly window says so, and names the day when it is not today', () => {
-    const thu = Math.floor(new Date(2026, 7, 6, 9, 15).getTime() / 1000);
-    expect(paceLine({ state: 'runs_out', window: 'seven_day', at: thu, before_reset: 2 * 86400 }, NOW, false))
-      .toEqual({ text: 'Weekly limit runs out Thu at 09:15', aside: '2 d early', level: 'warn' });
+  test('a reset in the past does not go negative', () => {
+    expect(resetLabel({ remaining: 3, resets_at: NOW - 600, refilled: false }, NOW)).toBe('0m');
   });
-  test('safe and steady are calm, and say something rather than nothing', () => {
-    expect(paceLine({ state: 'safe' }, NOW).level).toBe('calm');
-    expect(paceLine({ state: 'steady', minutes: 12 }, NOW).text)
-      .toBe('Steady — no drop in the last 12 min');
-  });
-  test('while it is still counting it says so — an update restarts the app', () => {
-    expect(paceLine({ state: 'warming', seconds_left: 120 }, NOW).text)
-      .toBe('Working out your pace — 2 min to go');
-  });
-  test('with no readings at all there is no line', () => {
-    expect(paceLine({ state: 'unknown' }, NOW)).toBeNull();
+  test('a window that already came back has nothing to count down to', () => {
+    // Its resets_at names the refill behind us; a countdown to it printed a
+    // confident "0m" every morning.
+    expect(resetLabel({ remaining: 100, resets_at: NOW - 3600, refilled: true }, NOW)).toBe('—');
   });
 });
 

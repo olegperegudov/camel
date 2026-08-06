@@ -2,7 +2,7 @@
 // visible. All numbers come pre-interpreted (remaining, not used) — the panel
 // only formats.
 
-import { age, levelOf, paceLine, refilledWhen, resetIn, resetWhen } from './format.js';
+import { age, levelOf, resetLabel } from './format.js';
 
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
@@ -24,24 +24,15 @@ const NO_DATA = {
 
 function paintRow(rowId, win, now) {
   const row = document.getElementById(rowId);
-  const lvl = levelOf(win.remaining);
-  const left = row.querySelector('.left');
-  left.querySelector('.pct').textContent = `${win.remaining}%`;
   const bar = row.querySelector('.bar');
+  // The length is set as a share, not a pixel count: how long a full bar is
+  // belongs to the stylesheet, next to the window's own width.
+  bar.style.setProperty('--pct', win.remaining);
+  bar.classList.remove(...LEVELS);
+  bar.classList.add(levelOf(win.remaining));
   bar.setAttribute('aria-valuenow', win.remaining);
   bar.setAttribute('aria-valuetext', `${win.remaining}% left`);
-  const fill = row.querySelector('.bar span');
-  fill.style.width = `${win.remaining}%`;
-  for (const el of [left, fill]) {
-    el.classList.remove(...LEVELS);
-    el.classList.add(lvl);
-  }
-  // A refilled window has no future reset to count down to: its resets_at is
-  // the moment it came back, and nothing has written the next one yet.
-  row.querySelector('.when').textContent = win.refilled
-    ? refilledWhen(win.resets_at, now)
-    : resetWhen(win.resets_at, now);
-  row.querySelector('.in').textContent = win.refilled ? '' : resetIn(win.resets_at, now);
+  row.querySelector('.until').textContent = resetLabel(win, now);
 }
 
 async function render() {
@@ -50,14 +41,6 @@ async function render() {
   const s = reading.state === 'ok' ? reading.snapshot : null;
   document.getElementById('rows').hidden = !s;
   document.getElementById('empty').hidden = !!s;
-  const pace = document.getElementById('pace');
-  const verdict = s ? paceLine(data.pace, data.now) : null;
-  pace.hidden = !verdict;
-  if (verdict) {
-    pace.querySelector('.what').textContent = verdict.text;
-    pace.querySelector('.aside').textContent = verdict.aside;
-    pace.className = verdict.level;
-  }
   if (s) {
     paintRow('row-five', s.five_hour, data.now);
     paintRow('row-seven', s.seven_day, data.now);

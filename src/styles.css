@@ -14,6 +14,9 @@ html, body {
 /* The panel floats over someone else's screen, so the surface is opaque:
    translucency is only for windows that sit over our own backdrop. */
 .panel {
+  /* How long a full bar is. The window is 320 wide, so 220 leaves room for
+     the time to sit beside a bar that has not been spent at all. */
+  --track: 220px;
   box-sizing: border-box;
   /* min-height, not height: the window is sized to this box, and a wrapped
      line has to make the box taller rather than be cut off by it. */
@@ -32,86 +35,47 @@ html, body {
    the empty state showed hollow bars behind its own message that way. */
 [hidden] { display: none !important; }
 
-/* The one place the eye is meant to land first: the answer, not the inputs.
-   Colour carries the severity — everything around it stays quiet. */
-#pace {
-  margin: 0;
-  display: flex;
-  justify-content: space-between;
-  /* Wrapping is allowed: the window measures its content, so a long verdict
-     makes the panel taller instead of being cut in half. */
-  flex-wrap: wrap;
-  gap: 0 10px;
-  font-size: 12px;
-  color: #9aa1ac;
-  font-variant-numeric: tabular-nums;
-}
-#pace.warn { color: #ff7b7f; }
-#pace.warn .what { font-weight: 600; }
-#pace .aside { color: #9aa1ac; }
-
 #rows {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
-.top {
+.row {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 6px;
+  flex-direction: column;
+  gap: 7px;
 }
 
 .name { font-weight: 600; }
 
-.left {
-  font-weight: 700;
-  font-size: 15px;
-  font-variant-numeric: tabular-nums;
+.line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-/* The noun rides along without competing with the number. */
-.left .unit {
-  margin-left: 4px;
-  font-weight: 400;
-  font-size: 12px;
-  color: #9aa1ac;
-}
-
-/* The track is as light as it can be while every fill still clears 3:1
-   against it — that boundary is where "how much is left" is actually read,
-   so it wins over the track's own contrast with the card. */
+/* No track behind the bar: the empty part of a window is not information, and
+   drawing it turned every reading into two shapes to compare instead of one
+   length to read. The time rides at the bar's end, so the eye lands on how
+   much is left and how long it has to last in the same glance. */
 .bar {
   height: 5px;
   border-radius: 3px;
-  background: #4a5366;
-  overflow: hidden;
-}
-
-.bar span {
-  display: block;
-  height: 100%;
-  border-radius: 3px;
-  width: 0;
+  width: calc(var(--track) * var(--pct, 0) / 100);
   /* An empty tank must still draw something: a bar that vanishes at 0% reads
      as a rendering failure, which is the same rule tray_icon.rs applies. */
   min-width: 3px;
+  flex: none;
 }
 
-.ok    { color: #3ecf63; }
-.low   { color: #f2b705; }
-.critical { color: #ff7b7f; }
-.bar .ok    { background: #3ecf63; }
-.bar .low   { background: #f2b705; }
-.bar .critical { background: #ff7b7f; }
+.bar.ok { background: #3ecf63; }
+.bar.low { background: #f2b705; }
+.bar.critical { background: #ff7b7f; }
 
-.reset {
-  display: flex;
-  justify-content: space-between;
+.until {
   color: #9aa1ac;
   font-size: 12px;
-  margin-top: 5px;
   font-variant-numeric: tabular-nums;
 }
 

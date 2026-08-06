@@ -7,22 +7,23 @@
 </head>
 <body>
   <main class="panel">
-    <!-- The conclusion, above the numbers it was drawn from. -->
-    <p id="pace" hidden><span class="what"></span><span class="aside"></span></p>
     <section id="rows" hidden>
       <div class="row" id="row-five">
-        <!-- "left", not a bare percent: every progress bar the user has ever
-             seen fills up as things get worse, and this one drains. -->
-        <div class="top"><span class="name">Last 5 hours</span><span class="left"><span class="pct"></span><span class="unit">left</span></span></div>
-        <!-- The bar carries the same reading as the number, so a screen reader
-             gets the geometry too, not just the digits. -->
-        <div class="bar" role="progressbar" aria-label="Last 5 hours" aria-valuemin="0" aria-valuemax="100"><span></span></div>
-        <div class="reset"><span class="when"></span><span class="in"></span></div>
+        <div class="name">5h</div>
+        <!-- The bar is the whole reading: its length is what's left, its colour
+             how bad that is. The words a screen reader needs live in the label,
+             since "5h" alone says nothing out loud. -->
+        <div class="line">
+          <span class="bar" role="progressbar" aria-label="last 5 hours" aria-valuemin="0" aria-valuemax="100"></span>
+          <span class="until"></span>
+        </div>
       </div>
       <div class="row" id="row-seven">
-        <div class="top"><span class="name">Last 7 days</span><span class="left"><span class="pct"></span><span class="unit">left</span></span></div>
-        <div class="bar" role="progressbar" aria-label="Last 7 days" aria-valuemin="0" aria-valuemax="100"><span></span></div>
-        <div class="reset"><span class="when"></span><span class="in"></span></div>
+        <div class="name">7d</div>
+        <div class="line">
+          <span class="bar" role="progressbar" aria-label="last 7 days" aria-valuemin="0" aria-valuemax="100"></span>
+          <span class="until"></span>
+        </div>
       </div>
     </section>
     <section id="empty" hidden>

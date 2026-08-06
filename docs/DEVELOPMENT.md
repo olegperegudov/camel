@@ -13,7 +13,6 @@ src/camel.png         master icon; `npx tauri icon src/camel.png` rebuilds icons
 src-tauri/src/
   lib.rs              setup, tray, panel window, commands, pollers
   limits.rs           reads/parses ~/.claude/statusline-last.json — cargo tests
-  pace.rs             twenty-minute sample buffer → burn-rate forecast — cargo tests
   tray_icon.rs        runtime-drawn bar icon + update badge — cargo tests
   private.rs          0600/0700 file writes (the debug log goes through it)
   debug_log.rs        fresh-per-launch event log in the app data dir
@@ -37,15 +36,22 @@ the quota did come back, and the timestamp in the file now names that refill
 rather than a future event. Without the flag the panel counted down to a
 moment in the past, forever, in confident green.
 
-## Pace
+## What the panel draws
 
-`pace.rs` keeps the last 20 minutes of readings and takes the slope. Under
-`MIN_SPAN_SECS` of history it returns `Unknown` and the panel shows no verdict
-at all — a forecast from two samples is a guess wearing a number. A reading
-that jumps upward is a refill, not negative spending, so it clears the buffer.
+One row per window: the name (`5h` / `7d`), then a coloured line whose length
+is the remaining share, then how long that share has to last. There is no
+track behind the line — empty capacity is not information, and drawing it made
+every reading two shapes to compare instead of one length to look at.
 
-The verdict crosses to the webview as data (`Idle` / `Safe` / `RunsOut`); the
-sentence is built in `format.js`, like every other string in the panel.
+Length is set as `--pct` on the element; how long a full line is (`--track`)
+lives in the stylesheet next to the window's own width, so the two cannot
+drift apart.
+
+A burn-rate forecast lived here until 0.1.11 (`pace.rs`, a 20-minute sample
+buffer, a verdict line above the rows). It was correct and nobody read it: the
+panel is opened to see how much is left and how long it has to last, and every
+extra line sat between the eye and that. Removed with its line — see git
+history if it ever earns a way back.
 
 ## Panel size
 
@@ -63,9 +69,9 @@ line both sat below WCAG AA before and were repalletted. The tray icon sits on
 a menu bar that may be light or dark, so it keeps mid-tone colours that survive
 both. Aligning them would cost legibility on a light menu bar.
 
-The bar track is as light as it can be while every fill still clears 3:1
-against it: fill-versus-track is where "how much is left" is actually read, so
-it wins over the track's own contrast with the card.
+The bar has no track to contrast against, so each fill is read against the
+card itself — green, yellow and red all clear 3:1 on `#1b1f26`, which is the
+WCAG 1.4.11 bar for a graphic carrying meaning.
 
 ## Run & test
 
@@ -88,7 +94,7 @@ Taken by the app's own code, not mocked up:
   `panel / low / zero / refilled / update / empty / unreadable`.
   ```
   cd ~/membeme/system/tools/web_eye
-  SHOT=low OUT=~/pets/camel/docs/screenshots/panel-pace.png node _camel_shot.mjs
+  SHOT=low OUT=~/pets/camel/docs/screenshots/panel-low.png node _camel_shot.mjs
   ```
 - Tray strip: `cargo test -- --ignored dump_icons` writes the real rendered
   RGBA icons to `target/icon-dump/`; a small PIL script composes them onto a

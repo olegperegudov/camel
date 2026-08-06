@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.1.11 — 2026-08-06
+
+The panel is down to what it is actually read for: one line per window, its
+length what's left, and beside it how long that has to last.
+
+- Gone from the panel: the pace verdict, the percentage, the word "last" in
+  the window names, the "resets today at 17:30 · in 2h" row, and the grey rest
+  of the bar. Each of them was a second thing to read on the way to the first.
+- The bar has no track behind it. Empty capacity is not information, and
+  drawing it turned every reading into two shapes to compare instead of one
+  length to look at. The time now rides at the bar's end, so how much is left
+  and how long it has to last land in the same glance.
+- A refilled window shows full with a dash where the countdown would be: its
+  stored reset moment is behind us and nothing has written the next one.
+- The forecast is gone with the line that showed it — `pace.rs`, the sample
+  history and the panel's tallest row. It answered a question the panel no
+  longer asks, and dead machinery kept warm is worse than no machinery.
+- Countdowns are compact: "47m", "1h 31m", "4d". Still truncating, never
+  rounding up — 91 minutes must not read as two hours on a five-hour budget.
+
 ## 0.1.10 — 2026-08-06
 
 - The forecast says it is still counting instead of showing nothing. An update
