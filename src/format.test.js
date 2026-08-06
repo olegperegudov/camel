@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { age, levelOf, resetIn, resetWhen } from './format.js';
+import { age, levelOf, refilledWhen, resetIn, resetWhen } from './format.js';
 
 // Wed 2026-08-05 14:32 local — an anchor mid-day, away from midnight edges.
 const NOW = Math.floor(new Date(2026, 7, 5, 14, 32).getTime() / 1000);
@@ -22,6 +22,15 @@ describe('resetWhen', () => {
   test('another day names the weekday', () => {
     const thu0100 = Math.floor(new Date(2026, 7, 6, 1, 0).getTime() / 1000);
     expect(resetWhen(thu0100, NOW)).toBe('resets Thu at 01:00');
+  });
+});
+
+describe('refilledWhen', () => {
+  test('a window that already came back names the refill, not a reset', () => {
+    const earlier = Math.floor(new Date(2026, 7, 5, 9, 0).getTime() / 1000);
+    expect(refilledWhen(earlier, NOW)).toBe('refilled today at 09:00');
+    const yesterday = Math.floor(new Date(2026, 7, 4, 22, 33).getTime() / 1000);
+    expect(refilledWhen(yesterday, NOW)).toBe('refilled Tue at 22:33');
   });
 });
 

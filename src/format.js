@@ -12,15 +12,24 @@ export function levelOf(remaining) {
   return 'critical';
 }
 
-// "resets today at 17:30" / "resets Thu at 01:00" — day only when it isn't today.
-export function resetWhen(resetsAtSecs, nowSecs) {
-  const reset = new Date(resetsAtSecs * 1000);
+// "today at 17:30" / "Thu at 01:00" — the day is named only when it isn't today.
+function dayTime(secs, nowSecs) {
+  const at = new Date(secs * 1000);
   const now = new Date(nowSecs * 1000);
-  const hm = reset.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-  const sameDay = reset.toDateString() === now.toDateString();
-  if (sameDay) return `resets today at ${hm}`;
-  const day = reset.toLocaleDateString('en-US', { weekday: 'short' });
-  return `resets ${day} at ${hm}`;
+  const hm = at.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  if (at.toDateString() === now.toDateString()) return `today at ${hm}`;
+  return `${at.toLocaleDateString('en-US', { weekday: 'short' })} at ${hm}`;
+}
+
+// "resets today at 17:30" / "resets Thu at 01:00".
+export function resetWhen(resetsAtSecs, nowSecs) {
+  return `resets ${dayTime(resetsAtSecs, nowSecs)}`;
+}
+
+// The window already came back and no session has written the next reset yet,
+// so the same timestamp names a refill in the past, not an event ahead.
+export function refilledWhen(resetsAtSecs, nowSecs) {
+  return `refilled ${dayTime(resetsAtSecs, nowSecs)}`;
 }
 
 // "in 42 min" / "in 3 h" / "in 2 d" — the countdown next to the reset time.

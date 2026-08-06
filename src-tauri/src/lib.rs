@@ -33,8 +33,12 @@ const PANEL_W: f64 = 320.0;
 const PANEL_H: f64 = 200.0;
 const PANEL_H_WITH_UPDATE: f64 = 248.0;
 
+/// Where the panel's "how do I set this up?" button lands: the README section
+/// with the two lines a status line needs.
+const SETUP_GUIDE: &str = "https://github.com/olegperegudov/camel#where-the-numbers-come-from";
+
 struct AppState {
-    snapshot: Mutex<Option<limits::Snapshot>>,
+    reading: Mutex<limits::Reading>,
     update_badge: AtomicBool,
     update_version: Mutex<Option<String>>,
     /// macOS delivers tray clicks inconsistently across versions — some send
@@ -52,14 +56,28 @@ struct AppState {
 /// app version and a pending update if one was found.
 #[tauri::command]
 fn get_limits(state: tauri::State<AppState>) -> serde_json::Value {
-    let snapshot = state.snapshot.lock().ok().and_then(|g| *g);
+    let reading = state
+        .reading
+        .lock()
+        .map(|g| *g)
+        .unwrap_or(limits::Reading::Missing);
     let update = state.update_version.lock().ok().and_then(|g| g.clone());
     serde_json::json!({
-        "snapshot": snapshot,
+        "reading": reading,
         "now": limits::now_secs(),
         "version": env!("CARGO_PKG_VERSION"),
         "update": update,
     })
+}
+
+/// The panel asks for the setup guide; it never names a URL. Anything the
+/// webview could point at is decided here, not there.
+#[tauri::command]
+fn open_setup_guide(app: AppHandle) {
+    use tauri_plugin_opener::OpenerExt;
+    if let Err(e) = app.opener().open_url(SETUP_GUIDE, None::<&str>) {
+        debug_log::log(&format!("setup guide: {}", e));
+    }
 }
 
 #[tauri::command]
@@ -94,7 +112,7 @@ async fn install_update(app: AppHandle) -> Result<(), String> {
 fn refresh(app: &AppHandle) {
     let Some(state) = app.try_state::<AppState>() else { return };
     let fresh = limits::read();
-    let changed = match state.snapshot.lock() {
+    let changed = match state.reading.lock() {
         Ok(mut g) => {
             let changed = *g != fresh;
             *g = fresh;
@@ -113,7 +131,10 @@ fn refresh(app: &AppHandle) {
 /// badge and startup all paint the same way.
 fn apply_tray(app: &AppHandle) {
     let Some(state) = app.try_state::<AppState>() else { return };
-    let snapshot = state.snapshot.lock().ok().and_then(|g| *g);
+    let snapshot = match state.reading.lock().map(|g| *g) {
+        Ok(limits::Reading::Ok(s)) => Some(s),
+        _ => None,
+    };
     let badge = state.update_badge.load(Ordering::Relaxed);
     let bars = snapshot.map(|s| (s.five_hour.remaining, s.seven_day.remaining));
     let rgba = tray_icon::render(bars, badge);
@@ -227,9 +248,10 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_nspanel_init())
         .manage(AppState {
-            snapshot: Mutex::new(None),
+            reading: Mutex::new(limits::Reading::Missing),
             update_badge: AtomicBool::new(false),
             update_version: Mutex::new(None),
             last_toggle: Mutex::new(None),
@@ -239,7 +261,8 @@ pub fn run() {
             get_limits,
             js_log,
             hide_panel,
-            install_update
+            install_update,
+            open_setup_guide
         ])
         .setup(move |app| {
             let handle = app.handle().clone();

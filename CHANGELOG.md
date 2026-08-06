@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.1.7 — 2026-08-06
+
+Design critique of the panel (`/impeccable critique`, scored 20/40) turned up
+three things the panel was getting wrong at exactly the moments it is trusted
+most. All three are fixed here.
+
+- **An empty tank drew nothing.** The fill had no minimum width, so 0% left a
+  bare track that reads as a rendering failure rather than "you are out". The
+  tray icon has guarded this since 0.1.0; the panel now does too.
+- **A refilled window was shown as a future reset.** When a window's reset
+  moment passes and no session has run since, the file still carries the old
+  timestamp. The panel printed it as an upcoming reset with a countdown frozen
+  at "in 0 min" — every morning, in confident green. Rust now flags the window
+  as refilled and the panel says "refilled today at 09:00" with no countdown.
+- **The empty state told first-timers something false.** "Talk to Claude Code
+  once and the bars appear" is only true once the status line writes the file.
+  The panel now names the file, says the status line has to write it, and has
+  a button that opens the setup guide. A file we cannot parse gets its own
+  sentence instead of sharing the "no data" screen.
+- Contrast: the critical percentage (4.22:1) and the freshness line (4.28:1)
+  both sat below WCAG AA — the two elements most needed under time pressure.
+  Repalletted to 6.6:1 and 5.9:1, and the bar track lightened so every fill
+  clears 3:1 against it.
+- The update button had no visible keyboard focus; both buttons now show a
+  focus ring. The bars carry `role="progressbar"` so a screen reader gets the
+  geometry, not just the digits.
+
 ## 0.1.6 — 2026-08-05
 
 - Left click finally opens the panel. The panel is now a non-activating

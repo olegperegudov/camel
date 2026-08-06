@@ -51,10 +51,13 @@ html, body {
   font-variant-numeric: tabular-nums;
 }
 
+/* The track is as light as it can be while every fill still clears 3:1
+   against it — that boundary is where "how much is left" is actually read,
+   so it wins over the track's own contrast with the card. */
 .bar {
   height: 5px;
   border-radius: 3px;
-  background: #3a4150;
+  background: #4a5366;
   overflow: hidden;
 }
 
@@ -63,14 +66,17 @@ html, body {
   height: 100%;
   border-radius: 3px;
   width: 0;
+  /* An empty tank must still draw something: a bar that vanishes at 0% reads
+     as a rendering failure, which is the same rule tray_icon.rs applies. */
+  min-width: 3px;
 }
 
-.ok    { color: #30b350; }
-.low   { color: #e0a800; }
-.critical { color: #e5484d; }
-.bar .ok    { background: #30b350; }
-.bar .low   { background: #e0a800; }
-.bar .critical { background: #e5484d; }
+.ok    { color: #3ecf63; }
+.low   { color: #f2b705; }
+.critical { color: #ff7b7f; }
+.bar .ok    { background: #3ecf63; }
+.bar .low   { background: #f2b705; }
+.bar .critical { background: #ff7b7f; }
 
 .reset {
   display: flex;
@@ -81,22 +87,46 @@ html, body {
   font-variant-numeric: tabular-nums;
 }
 
-#empty { color: #9aa1ac; }
-#empty p { margin: 0 0 6px; color: #ececf0; }
+#empty {
+  color: #9aa1ac;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+#empty p { margin: 0; color: #ececf0; }
 #empty .how { color: #9aa1ac; font-size: 12px; }
 
-/* The one action the panel can ever have: installing a found update. */
-#update {
+/* The two buttons the panel can ever have: installing a found update, and
+   getting out of the empty state. */
+#update, #setup {
   font: inherit;
   border: 0;
   border-radius: 7px;
   padding: 7px 10px;
-  background: rgba(74, 222, 128, 0.14);
-  color: #4ade80;
   cursor: pointer;
   outline: none;
 }
+#update {
+  background: rgba(74, 222, 128, 0.14);
+  color: #4ade80;
+}
 #update:hover { background: rgba(74, 222, 128, 0.22); }
+
+#setup {
+  margin-top: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ececf0;
+  font-size: 12px;
+}
+#setup:hover { background: rgba(255, 255, 255, 0.14); }
+
+/* outline:none above is for the mouse — WKWebView flashes a ring on
+   programmatic focus. Keyboard focus still has to be visible. */
+#update:focus-visible, #setup:focus-visible {
+  outline: 2px solid #8ab4ff;
+  outline-offset: 2px;
+}
 
 footer {
   margin-top: auto;
@@ -104,6 +134,10 @@ footer {
   justify-content: space-between;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   padding-top: 9px;
-  color: #7c828d;
+  color: #959ba6;
   font-size: 11.5px;
 }
+
+/* Freshness is the panel's own disclaimer — it must be readable, and it must
+   not jitter as the minute count changes width. */
+#age { font-variant-numeric: tabular-nums; }

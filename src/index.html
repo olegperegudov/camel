@@ -10,18 +10,21 @@
     <section id="rows" hidden>
       <div class="row" id="row-five">
         <div class="top"><span class="name">5-hour window</span><span class="left"></span></div>
-        <div class="bar"><span></span></div>
+        <!-- The bar carries the same reading as the number, so a screen reader
+             gets the geometry too, not just the digits. -->
+        <div class="bar" role="progressbar" aria-label="5-hour window" aria-valuemin="0" aria-valuemax="100"><span></span></div>
         <div class="reset"><span class="when"></span><span class="in"></span></div>
       </div>
       <div class="row" id="row-seven">
         <div class="top"><span class="name">Week</span><span class="left"></span></div>
-        <div class="bar"><span></span></div>
+        <div class="bar" role="progressbar" aria-label="Weekly window" aria-valuemin="0" aria-valuemax="100"><span></span></div>
         <div class="reset"><span class="when"></span><span class="in"></span></div>
       </div>
     </section>
     <section id="empty" hidden>
-      <p>No limit data yet.</p>
-      <p class="how">Camel reads what the Claude Code status line writes. Talk to Claude Code once and the bars appear.</p>
+      <p id="empty-head"></p>
+      <p class="how" id="empty-how"></p>
+      <button id="setup">How to set it up</button>
     </section>
     <button id="update" hidden></button>
     <footer>
