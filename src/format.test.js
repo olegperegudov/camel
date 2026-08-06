@@ -72,9 +72,10 @@ describe('paceLine', () => {
     expect(paceLine({ state: 'runs_out', window: 'seven_day', at: thu, before_reset: 2 * 86400 }, NOW, false))
       .toEqual({ text: 'Weekly limit runs out Thu at 09:15', aside: '2 d early', level: 'warn' });
   });
-  test('safe and idle are calm, and say something rather than nothing', () => {
+  test('safe and steady are calm, and say something rather than nothing', () => {
     expect(paceLine({ state: 'safe' }, NOW).level).toBe('calm');
-    expect(paceLine({ state: 'idle', minutes: 12 }, NOW).text).toBe('Idle — nothing spent in 12 min');
+    expect(paceLine({ state: 'steady', minutes: 12 }, NOW).text)
+      .toBe('Steady — no drop in the last 12 min');
   });
   test('too little history shows no line at all', () => {
     expect(paceLine({ state: 'unknown' }, NOW)).toBeNull();

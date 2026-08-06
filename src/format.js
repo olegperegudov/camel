@@ -81,8 +81,11 @@ function shortWhen(secs, nowSecs, hour12) {
 // of the miss, in the same two-column rhythm as the reset row below it.
 export function paceLine(pace, nowSecs, hour12 = systemUses12Hour()) {
   switch (pace.state) {
-    case 'idle':
-      return { text: `Idle — nothing spent in ${pace.minutes} min`, aside: '', level: 'calm' };
+    // Not "idle": these windows roll, so a level that holds may mean nobody is
+    // working *or* that usage is ageing out as fast as it arrives. The panel
+    // reports what it can see — the level — not a guess about the person.
+    case 'steady':
+      return { text: `Steady — no drop in the last ${pace.minutes} min`, aside: '', level: 'calm' };
     case 'safe':
       return { text: 'On pace to last the window', aside: '', level: 'calm' };
     case 'runs_out': {

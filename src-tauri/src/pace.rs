@@ -22,11 +22,21 @@ pub struct Sample {
     pub at: i64,
     pub five: u8,
     pub seven: u8,
+    /// The reset moments the readings belonged to. A window that starts a new
+    /// period is a different window, and old samples do not describe it.
+    pub five_reset: i64,
+    pub seven_reset: i64,
 }
 
 impl Sample {
     pub fn of(s: &Snapshot, at: i64) -> Self {
-        Sample { at, five: s.five_hour.remaining, seven: s.seven_day.remaining }
+        Sample {
+            at,
+            five: s.five_hour.remaining,
+            seven: s.seven_day.remaining,
+            five_reset: s.five_hour.resets_at,
+            seven_reset: s.seven_day.resets_at,
+        }
     }
 }
 
@@ -36,8 +46,9 @@ impl Sample {
 pub enum Pace {
     /// Not enough history yet to say anything honest.
     Unknown,
-    /// Nothing was spent across everything we can see.
-    Idle { minutes: i64 },
+    /// The level is not falling across everything we can see — either nobody
+    /// is working, or usage is ageing out as fast as it arrives.
+    Steady { minutes: i64 },
     /// Every window outlasts its own reset at this rate.
     Safe,
     /// The window that empties first, and when it does.
@@ -45,12 +56,15 @@ pub enum Pace {
 }
 
 pub fn push(history: &mut VecDeque<Sample>, s: Sample) {
-    // A window coming back is a refill, not negative spending — the slope
-    // across that jump would be nonsense, so the history starts over.
-    let refilled = history
+    // A *new period* invalidates the history, and only that. Remaining going
+    // up inside the same period is ordinary: these windows roll, so usage
+    // ages out the back and the number recovers on its own — treating every
+    // rise as a refill cleared the buffer every couple of minutes and the
+    // forecast never had enough history to say anything.
+    let new_period = history
         .back()
-        .is_some_and(|last| s.five > last.five || s.seven > last.seven);
-    if refilled {
+        .is_some_and(|last| s.five_reset != last.five_reset || s.seven_reset != last.seven_reset);
+    if new_period {
         history.clear();
     }
     history.push_back(s);
@@ -68,10 +82,12 @@ pub fn of(history: &VecDeque<Sample>, snap: &Snapshot, now: i64) -> Pace {
         return Pace::Unknown;
     }
 
+    // saturating_sub, so a window that recovered over the span counts as no
+    // burn rather than a negative one.
     let spent_five = first.five.saturating_sub(last.five);
     let spent_seven = first.seven.saturating_sub(last.seven);
     if spent_five == 0 && spent_seven == 0 {
-        return Pace::Idle { minutes: span / 60 };
+        return Pace::Steady { minutes: span / 60 };
     }
 
     let runs_out = |name: &'static str, spent: u8, w: Window| -> Option<Pace> {
@@ -114,12 +130,18 @@ mod tests {
         }
     }
 
+    const FIVE_RESET: i64 = 99999;
+    const SEVEN_RESET: i64 = 999999;
+
+    fn sample(at: i64, five: u8, seven: u8) -> Sample {
+        Sample { at, five, seven, five_reset: FIVE_RESET, seven_reset: SEVEN_RESET }
+    }
+
     /// Ten minutes of samples, `five` falling by `drop` percent over them.
     fn history(drop: u8) -> VecDeque<Sample> {
         let mut h = VecDeque::new();
         for i in 0..=10 {
-            let at = 1000 + i * 60;
-            push(&mut h, Sample { at, five: 80 - (drop as i64 * i / 10) as u8, seven: 90 });
+            push(&mut h, sample(1000 + i * 60, 80 - (drop as i64 * i / 10) as u8, 90));
         }
         h
     }
@@ -127,16 +149,33 @@ mod tests {
     #[test]
     fn too_little_history_says_nothing_rather_than_guessing() {
         let mut h = VecDeque::new();
-        push(&mut h, Sample { at: 1000, five: 80, seven: 90 });
-        push(&mut h, Sample { at: 1060, five: 79, seven: 90 });
-        assert_eq!(of(&h, &snap(79, 99999, 90, 999999), 1060), Pace::Unknown);
-        assert_eq!(of(&VecDeque::new(), &snap(80, 99999, 90, 999999), 1000), Pace::Unknown);
+        push(&mut h, sample(1000, 80, 90));
+        push(&mut h, sample(1060, 79, 90));
+        assert_eq!(of(&h, &snap(79, FIVE_RESET, 90, SEVEN_RESET), 1060), Pace::Unknown);
+        assert_eq!(of(&VecDeque::new(), &snap(80, FIVE_RESET, 90, SEVEN_RESET), 1000), Pace::Unknown);
     }
 
     #[test]
-    fn nothing_spent_is_idle_not_a_forecast() {
+    fn a_level_that_is_not_falling_is_steady_not_a_forecast() {
         let h = history(0);
-        assert_eq!(of(&h, &snap(80, 99999, 90, 999999), 1600), Pace::Idle { minutes: 10 });
+        assert_eq!(of(&h, &snap(80, FIVE_RESET, 90, SEVEN_RESET), 1600), Pace::Steady { minutes: 10 });
+    }
+
+    #[test]
+    fn a_rolling_window_recovering_does_not_wipe_the_history() {
+        // Seen live: these windows roll, so usage ages out the back and the
+        // remaining percent climbs on its own. Treating every rise as a refill
+        // cleared the buffer every couple of minutes and the forecast stayed
+        // Unknown forever.
+        let mut h = VecDeque::new();
+        for (i, five) in [82u8, 83, 82, 81, 88, 81, 80].iter().enumerate() {
+            push(&mut h, sample(1000 + i as i64 * 60, *five, 90));
+        }
+        assert_eq!(h.len(), 7);
+        assert!(matches!(
+            of(&h, &snap(80, FIVE_RESET, 90, SEVEN_RESET), 1360),
+            Pace::RunsOut { .. } | Pace::Safe
+        ));
     }
 
     #[test]
@@ -165,18 +204,23 @@ mod tests {
     }
 
     #[test]
-    fn a_refill_starts_the_history_over_instead_of_reading_as_a_negative_burn() {
+    fn a_new_period_starts_the_history_over() {
+        // The reset moment moved: this is a fresh window, and samples from the
+        // old one describe a budget that no longer exists.
         let mut h = history(20);
-        push(&mut h, Sample { at: 1660, five: 100, seven: 90 });
+        push(
+            &mut h,
+            Sample { at: 1660, five: 100, seven: 90, five_reset: FIVE_RESET + 5 * 3600, seven_reset: SEVEN_RESET },
+        );
         assert_eq!(h.len(), 1);
-        assert_eq!(of(&h, &snap(100, 99999, 90, 999999), 1660), Pace::Unknown);
+        assert_eq!(of(&h, &snap(100, FIVE_RESET + 5 * 3600, 90, SEVEN_RESET), 1660), Pace::Unknown);
     }
 
     #[test]
     fn samples_older_than_the_window_fall_out_the_front() {
         let mut h = VecDeque::new();
-        push(&mut h, Sample { at: 0, five: 90, seven: 95 });
-        push(&mut h, Sample { at: HISTORY_SECS + 1, five: 80, seven: 95 });
+        push(&mut h, sample(0, 90, 95));
+        push(&mut h, sample(HISTORY_SECS + 1, 80, 95));
         assert_eq!(h.len(), 1);
     }
 }

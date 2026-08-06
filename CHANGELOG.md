@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.9 — 2026-08-06
+
+- Fix, caught by watching the forecast against live data: these windows
+  *roll*, so the remaining percent climbs on its own as old usage ages out
+  the back. The first cut treated every rise as a refill and cleared the
+  sample buffer — which happened every couple of minutes, so the forecast
+  never gathered enough history and sat at "no verdict" forever. Only a new
+  period (the reset moment moving) clears the buffer now.
+- The calm verdict says "Steady — no drop in the last 12 min" rather than
+  "Idle". On a rolling window a level that holds may mean nobody is working,
+  or that usage is ageing out as fast as it arrives; the panel reports the
+  level it can see, not a guess about the person.
+
 ## 0.1.8 — 2026-08-06
 
 Design critique of the panel (`/impeccable critique`, scored 20/40) turned up

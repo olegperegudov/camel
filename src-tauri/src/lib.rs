@@ -158,6 +158,10 @@ fn refresh(app: &AppHandle) {
     }
     if changed {
         apply_tray(app);
+        // The forecast is the panel's headline and the panel is invisible most
+        // of the time; without this the next "the line says nothing" report
+        // would start from guesses.
+        debug_log::log(&format!("pace: {:?}", current_pace(&state)));
         let _ = app.emit("limits-changed", ());
     }
 }
