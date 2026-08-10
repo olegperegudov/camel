@@ -28,12 +28,10 @@ use tauri_plugin_updater::UpdaterExt;
 const POLL_SECS: u64 = 30;
 
 const PANEL_W: f64 = 320.0;
-/// Sized to the content: the update row is not always there, and a fixed tall
-/// window would show dead air above the footer the rest of the time.
 /// A first guess only, so the window opens at about the right size — the page
-/// measures itself and calls `fit_panel` with the truth a frame later.
-const PANEL_H: f64 = 130.0;
-const UPDATE_ROW_H: f64 = 48.0;
+/// measures itself and calls `fit_panel` with the truth a frame later. Two
+/// rows and the padding around them, which is what the panel usually holds.
+const PANEL_H: f64 = 80.0;
 
 /// Where the panel's "how do I set this up?" button lands: the README section
 /// with the two lines a status line needs.
@@ -99,7 +97,9 @@ fn hide_panel(app: AppHandle) {
 #[tauri::command]
 fn fit_panel(app: AppHandle, height: f64) {
     let Some(window) = app.get_webview_window("panel") else { return };
-    let _ = window.set_size(tauri::LogicalSize::new(PANEL_W, height.clamp(120.0, 520.0)));
+    // The floor is a sanity rail, not a shape: it exists so a measurement that
+    // arrives as zero cannot collapse the window into a sliver.
+    let _ = window.set_size(tauri::LogicalSize::new(PANEL_W, height.clamp(60.0, 520.0)));
 }
 
 #[tauri::command]
@@ -212,11 +212,7 @@ fn toggle_panel(app: &AppHandle, rect: Option<&tauri::Rect>) {
         return;
     }
     refresh(app);
-    let panel_h = app
-        .try_state::<AppState>()
-        .map(|s| PANEL_H + if s.update_badge.load(Ordering::Relaxed) { UPDATE_ROW_H } else { 0.0 })
-        .unwrap_or(PANEL_H);
-    let _ = window.set_size(tauri::LogicalSize::new(PANEL_W, panel_h));
+    let _ = window.set_size(tauri::LogicalSize::new(PANEL_W, PANEL_H));
     let scale = window.scale_factor().unwrap_or(1.0);
     let (px, py) = match rect.map(|r| (r.position, r.size)) {
         Some((tauri::Position::Physical(p), tauri::Size::Physical(s))) => {
@@ -238,7 +234,7 @@ fn toggle_panel(app: &AppHandle, rect: Option<&tauri::Rect>) {
     // Centred under the icon on macOS; above the taskbar icon on Windows,
     // where the tray lives at the bottom of the screen.
     let x = (px - PANEL_W / 2.0).max(8.0);
-    let y = if py > 400.0 { py - panel_h - 46.0 } else { py + 6.0 };
+    let y = if py > 400.0 { py - PANEL_H - 46.0 } else { py + 6.0 };
     let _ = window.set_position(tauri::LogicalPosition::new(x, y));
     if let Some(state) = app.try_state::<AppState>() {
         if let Ok(mut t) = state.panel_shown_at.lock() {

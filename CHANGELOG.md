@@ -13,6 +13,11 @@
 - Freshness is now the disclaimer it always was: nothing while the numbers
   describe the session in front of you, one amber line once the status line
   has been quiet for half an hour.
+- The panel is the size of what it holds. Its floor was 120 px against 80 px
+  of content, the line stopped short of the right margin, and the countdowns
+  ended each row wherever their text ran out. Now the line takes the width the
+  name and the countdown leave, the countdowns share one right-aligned column,
+  and the window closes on the last row.
 - The tray icon draws two pills instead of two rectangles, antialiased, badge
   included. An almost-empty window keeps a full round end rather than a sliver
   clipped by the cap — a fault, not an empty tank, is what a sliver reads as.

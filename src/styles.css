@@ -14,9 +14,6 @@ html, body {
 /* The panel floats over someone else's screen, so the surface is opaque:
    translucency is only for windows that sit over our own backdrop. */
 .panel {
-  /* How long a full bar is. The window is 320 wide; the name to the left and
-     the longest countdown to the right take the rest. */
-  --track: 176px;
   box-sizing: border-box;
   /* min-height, not height: the window is sized to this box, and a wrapped
      line has to make the box taller rather than be cut off by it. */
@@ -64,9 +61,11 @@ html, body {
    last land in the same glance. */
 .gauge {
   position: relative;
-  width: var(--track);
+  /* Takes whatever the name and the countdown leave: a fixed track left a
+     margin of dead panel on the right, and the longer the line, the finer the
+     reading it can carry. */
+  flex: 1;
   height: 5px;
-  flex: none;
   --notch: 0.8px;
   -webkit-mask-image: linear-gradient(90deg,
     #000 0 calc(25% - var(--notch)), transparent calc(25% - var(--notch)) calc(25% + var(--notch)),
@@ -93,7 +92,7 @@ html, body {
   display: block;
   height: 5px;
   border-radius: 3px;
-  width: calc(var(--track) * var(--pct, 0) / 100);
+  width: calc(var(--pct, 0) * 1%);
   /* An empty tank must still draw something: a bar that vanishes at 0% reads
      as a rendering failure, which is the same rule tray_icon.rs applies. */
   min-width: 3px;
@@ -103,7 +102,12 @@ html, body {
 .bar.low { background: #f2b705; }
 .bar.critical { background: #ff7b7f; }
 
+/* A column, not a tail: the countdowns differ in width ("3d" against
+   "4h 53m"), and left to themselves they ended the two rows at different x
+   and left a ragged margin beside the panel's edge. */
 .until {
+  flex: 0 0 54px;
+  text-align: right;
   color: #9aa1ac;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
