@@ -91,14 +91,17 @@ Taken by the app's own code, not mocked up:
 - Panel states: `_camel_shot.mjs` (web_eye harness) serves `src/` over its own
   http server, stubs `window.__TAURI__`, sizes the viewport with the app's own
   `contentHeight()` and shoots
-  `panel / low / zero / refilled / update / empty / unreadable`.
+  `panel / low / zero / refilled / stale / update / empty / unreadable`.
   ```
   cd ~/membeme/system/tools/web_eye
   SHOT=low OUT=~/pets/camel/docs/screenshots/panel-rows-low.png node _camel_shot.mjs
   ```
 - Tray strip: `cargo test -- --ignored dump_icons` writes the real rendered
-  RGBA icons to `target/icon-dump/`; a small PIL script composes them onto a
-  menu-bar background.
+  RGBA icons to `target/icon-dump/`, and `docs/_menubar_strip.py` composes them
+  onto a menu-bar background:
+  ```
+  cd ~/pets/camel && python3 docs/_menubar_strip.py docs/screenshots/menubar-pills.png
+  ```
 
 Two rules learned the hard way:
 

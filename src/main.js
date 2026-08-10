@@ -2,7 +2,7 @@
 // visible. All numbers come pre-interpreted (remaining, not used) — the panel
 // only formats.
 
-import { age, levelOf, resetLabel } from './format.js';
+import { levelOf, resetLabel, staleNote } from './format.js';
 
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
@@ -41,21 +41,18 @@ async function render() {
   const s = reading.state === 'ok' ? reading.snapshot : null;
   document.getElementById('rows').hidden = !s;
   document.getElementById('empty').hidden = !!s;
+  const stale = document.getElementById('stale');
+  const note = s ? staleNote(s.read_at, data.now) : null;
+  stale.hidden = !note;
+  stale.textContent = note ?? '';
   if (s) {
     paintRow('row-five', s.five_hour, data.now);
     paintRow('row-seven', s.seven_day, data.now);
-    document.getElementById('age').textContent = `updated ${age(s.read_at, data.now)}`;
   } else {
     const copy = NO_DATA[reading.state] ?? NO_DATA.missing;
     document.getElementById('empty-head').textContent = copy.head;
     document.getElementById('empty-how').textContent = copy.how;
-    document.getElementById('age').textContent = '';
   }
-  document.getElementById('version').textContent = `Camel v${data.version}`;
-  const update = document.getElementById('update');
-  update.hidden = !data.update;
-  // Same words as the tray menu item: one action, one name for it.
-  if (data.update) update.textContent = `Update to v${data.update}`;
   invoke('fit_panel', { height: contentHeight() });
 }
 
@@ -74,10 +71,6 @@ export function contentHeight() {
   return Math.ceil(stack + gaps + frame);
 }
 
-document.getElementById('update').addEventListener('click', () => {
-  invoke('install_update').catch((e) => invoke('js_log', { message: `install failed: ${e}` }));
-});
-
 document.getElementById('setup').addEventListener('click', () => {
   invoke('open_setup_guide');
 });
@@ -87,7 +80,6 @@ document.addEventListener('keydown', (e) => {
 });
 
 listen('limits-changed', render);
-listen('update-available', render);
 listen('panel-opened', render);
 
 render().catch((e) => invoke('js_log', { message: `render failed: ${e}` }));

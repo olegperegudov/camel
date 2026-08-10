@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { age, duration, levelOf, resetLabel } from './format.js';
+import { age, duration, levelOf, resetLabel, staleNote } from './format.js';
 
 // Wed 2026-08-05 14:32 local — an anchor mid-day, away from midnight edges.
 const NOW = Math.floor(new Date(2026, 7, 5, 14, 32).getTime() / 1000);
@@ -52,5 +52,17 @@ describe('age', () => {
     expect(age(NOW - 5 * 60, NOW)).toBe('5 min ago');
     expect(age(NOW - 3 * 3600, NOW)).toBe('3 h ago');
     expect(age(NOW - 2 * 86400, NOW)).toBe('2 d ago');
+  });
+});
+
+describe('staleNote', () => {
+  test('silent while the reading still describes the session', () => {
+    expect(staleNote(NOW - 60, NOW)).toBeNull();
+    expect(staleNote(NOW - 29 * 60, NOW)).toBeNull();
+  });
+
+  test('speaks up once the status line has gone quiet', () => {
+    expect(staleNote(NOW - 40 * 60, NOW)).toBe('numbers last read 40 min ago');
+    expect(staleNote(NOW - 5 * 3600, NOW)).toBe('numbers last read 5 h ago');
   });
 });

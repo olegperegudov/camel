@@ -56,18 +56,47 @@ html, body {
   flex: 0 0 22px;
 }
 
-/* No track behind the bar: the empty part of a window is not information, and
-   drawing it turned every reading into two shapes to compare instead of one
-   length to read. The time rides at the bar's end, so the eye lands on how
-   much is left and how long it has to last in the same glance. */
+/* A bare length says "some is left" but never how much: 60% and 90% looked
+   alike because there was nothing to measure them against. The gauge draws the
+   whole window as a dim bed, and three hairline notches cut bed and bar alike
+   into quarters — so a reading is "past the second notch", not a guess. The
+   time rides at the gauge's end, so how much is left and how long it has to
+   last land in the same glance. */
+.gauge {
+  position: relative;
+  width: var(--track);
+  height: 5px;
+  flex: none;
+  --notch: 0.8px;
+  -webkit-mask-image: linear-gradient(90deg,
+    #000 0 calc(25% - var(--notch)), transparent calc(25% - var(--notch)) calc(25% + var(--notch)),
+    #000 calc(25% + var(--notch)) calc(50% - var(--notch)), transparent calc(50% - var(--notch)) calc(50% + var(--notch)),
+    #000 calc(50% + var(--notch)) calc(75% - var(--notch)), transparent calc(75% - var(--notch)) calc(75% + var(--notch)),
+    #000 calc(75% + var(--notch)));
+  mask-image: linear-gradient(90deg,
+    #000 0 calc(25% - var(--notch)), transparent calc(25% - var(--notch)) calc(25% + var(--notch)),
+    #000 calc(25% + var(--notch)) calc(50% - var(--notch)), transparent calc(50% - var(--notch)) calc(50% + var(--notch)),
+    #000 calc(50% + var(--notch)) calc(75% - var(--notch)), transparent calc(75% - var(--notch)) calc(75% + var(--notch)),
+    #000 calc(75% + var(--notch)));
+}
+
+.gauge::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .bar {
+  position: relative;
+  display: block;
   height: 5px;
   border-radius: 3px;
   width: calc(var(--track) * var(--pct, 0) / 100);
   /* An empty tank must still draw something: a bar that vanishes at 0% reads
      as a rendering failure, which is the same rule tray_icon.rs applies. */
   min-width: 3px;
-  flex: none;
 }
 
 .bar.ok { background: #3ecf63; }
@@ -90,23 +119,15 @@ html, body {
 #empty p { margin: 0; color: #ececf0; }
 #empty .how { color: #9aa1ac; font-size: 12px; }
 
-/* The two buttons the panel can ever have: installing a found update, and
-   getting out of the empty state. */
-#update, #setup {
+/* The only button the panel can ever have: getting out of the empty state.
+   Version and update live in the tray menu, where a right click finds them. */
+#setup {
   font: inherit;
   border: 0;
   border-radius: 7px;
   padding: 7px 10px;
   cursor: pointer;
   outline: none;
-}
-#update {
-  background: rgba(74, 222, 128, 0.14);
-  color: #4ade80;
-}
-#update:hover { background: rgba(74, 222, 128, 0.22); }
-
-#setup {
   margin-top: 2px;
   background: rgba(255, 255, 255, 0.08);
   color: #ececf0;
@@ -116,21 +137,28 @@ html, body {
 
 /* outline:none above is for the mouse — WKWebView flashes a ring on
    programmatic focus. Keyboard focus still has to be visible. */
-#update:focus-visible, #setup:focus-visible {
+#setup:focus-visible {
   outline: 2px solid #8ab4ff;
   outline-offset: 2px;
 }
 
-footer {
-  margin-top: auto;
+/* The disclaimer, and only when it is owed: numbers this old describe a
+   session that has since moved on. Amber, not red — the reading is old, not
+   wrong. Tabular digits so the minute count does not jitter the line. */
+#stale {
+  margin: 0;
   display: flex;
-  justify-content: space-between;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding-top: 9px;
-  color: #959ba6;
+  align-items: center;
+  gap: 7px;
+  color: #d9b26a;
   font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
 }
-
-/* Freshness is the panel's own disclaimer — it must be readable, and it must
-   not jitter as the minute count changes width. */
-#age { font-variant-numeric: tabular-nums; }
+#stale::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}

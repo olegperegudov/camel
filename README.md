@@ -30,15 +30,15 @@ After downloading:
    `xattr -dr com.apple.quarantine /Applications/Camel.app` once, or use
    System Settings → Privacy & Security → **Open Anyway** after the first block.
 2. Make sure your Claude Code status line writes `~/.claude/statusline-last.json` (see below).
-3. Look at the menu bar — the bars are already yours.
+3. Look at the menu bar — the gauges are already yours.
 
-## Two bars, zero clicks
+## Two gauges, zero clicks
 
-The left bar is your last 5 hours, the right one your last 7 days. Green means
+The left pill is your last 5 hours, the right one your last 7 days. Green means
 plenty, yellow means half is gone, red means three quarters are. Hover for the
 exact numbers. A green dot on the icon means a Camel update is ready.
 
-<p align="center"><img src="docs/screenshots/menubar.png" width="380" alt="Menu bar states: fine, running low, update ready" /></p>
+<p align="center"><img src="docs/screenshots/menubar-pills.png" width="380" alt="Menu bar states: fine, running low, update ready" /></p>
 
 ## Click for how long it has to last
 
@@ -46,17 +46,20 @@ One line per window. The length of the line is what's left, and next to it is
 how long that has to last. Nothing else — no percentages to decode, no reset
 times to subtract in your head.
 
-<p align="center"><img src="docs/screenshots/panel-rows.png" width="320" alt="5h with a long green line and 2h beside it, 7d with a longer one and 4d" /></p>
+Three hairline notches cut each line into quarters, so "past the halfway mark"
+is something you see rather than estimate.
+
+<p align="center"><img src="docs/screenshots/panel-quarters.png" width="320" alt="5h green past the third quarter with 2h beside it, 7d nearly full with 4d" /></p>
 
 The colour changes on its own: yellow once half the window is gone, red at
 three quarters. A short red line next to a small number is the whole warning.
 
-<p align="center"><img src="docs/screenshots/panel-rows-low.png" width="320" alt="5h nearly spent, 47m left; 7d yellow with 4d" /></p>
+<p align="center"><img src="docs/screenshots/panel-quarters-low.png" width="320" alt="5h nearly spent, 47m left; 7d yellow with 4d" /></p>
 
 A window that has already come back shows full, with a dash where the
 countdown would be — nothing has scheduled the next reset yet.
 
-<p align="center"><img src="docs/screenshots/panel-rows-back.png" width="320" alt="5h full with a dash instead of a countdown" /></p>
+<p align="center"><img src="docs/screenshots/panel-quarters-back.png" width="320" alt="5h full with a dash instead of a countdown" /></p>
 
 ## Where the numbers come from
 
@@ -77,15 +80,19 @@ input JSON to `~/.claude/statusline-last.json`.
 Until that file exists, Camel says so and offers the way out — it never shows
 a zero it doesn't have.
 
-<p align="center"><img src="docs/screenshots/panel-setup.png" width="320" alt="No limit data yet, with a setup button" /></p>
+<p align="center"><img src="docs/screenshots/panel-setup-2.png" width="320" alt="No limit data yet, with a setup button" /></p>
+
+The status line writes on every turn, so the numbers are usually seconds old.
+When they aren't — half an hour of silence or more — the panel says how old
+they are instead of letting you read them as current.
+
+<p align="center"><img src="docs/screenshots/panel-stale.png" width="320" alt="Two green rows with a line reading numbers last read 40 min ago" /></p>
 
 ## Updates
 
-When the camel's icon grows a green dot, an update is ready — click the icon
-and install from the panel, or right-click → **Update to vX.Y.Z**. Done in
-seconds, settings survive.
-
-<p align="center"><img src="docs/screenshots/panel-rows-update.png" width="320" alt="Update ready" /></p>
+When the camel's icon grows a green dot, an update is ready — right-click the
+icon → **Update to vX.Y.Z**. Done in seconds, settings survive. The version you
+are on lives in the same menu, which is why the panel itself stays wordless.
 
 ## Privacy
 

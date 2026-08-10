@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+- Each line is now measured. A dim bed draws the whole window behind the bar,
+  and three hairline notches cut bed and bar alike into quarters — 0.1.11
+  removed the track for being a second shape to compare, but with nothing to
+  measure against, 60% and 90% looked the same. A reading is now "past the
+  second notch", not a guess. Colours are unchanged: yellow at half spent, red
+  at three quarters.
+- The footer is gone. Version and updates live in the right-click menu, and
+  repeating them under every reading was the panel talking about itself.
+- Freshness is now the disclaimer it always was: nothing while the numbers
+  describe the session in front of you, one amber line once the status line
+  has been quiet for half an hour.
+- The tray icon draws two pills instead of two rectangles, antialiased, badge
+  included. An almost-empty window keeps a full round end rather than a sliver
+  clipped by the cap — a fault, not an empty tank, is what a sliver reads as.
+
 ## 0.1.12 — 2026-08-06
 
 - The window name moved onto the line's row: `5h ——————— 2h`. Stacking it above

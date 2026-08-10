@@ -37,6 +37,19 @@ export function resetLabel(win, nowSecs) {
   return win.refilled ? '—' : duration(win.resets_at - nowSecs);
 }
 
+// Past this, a reading stops describing the session in front of the user: the
+// status line writes on every turn, so half an hour of silence means the
+// numbers belong to work that has already moved on.
+export const STALE_AFTER_SECS = 30 * 60;
+
+// The line under the bars, or nothing at all. Freshness is only worth the
+// user's attention when it has run out — a panel that swears it is current on
+// every open is noise carrying no decision.
+export function staleNote(readAtSecs, nowSecs) {
+  if (nowSecs - readAtSecs < STALE_AFTER_SECS) return null;
+  return `numbers last read ${age(readAtSecs, nowSecs)}`;
+}
+
 // How stale the numbers are: "just now" / "5 min ago" / "3 h ago" / "2 d ago".
 export function age(readAtSecs, nowSecs) {
   const secs = Math.max(0, nowSecs - readAtSecs);
