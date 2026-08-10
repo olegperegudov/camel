@@ -37,6 +37,10 @@ const PANEL_H: f64 = 80.0;
 /// with the two lines a status line needs.
 const SETUP_GUIDE: &str = "https://github.com/olegperegudov/camel#where-the-numbers-come-from";
 
+/// Release pages, one per tag: the menu appends `v{version}` to reach the one
+/// this build came from.
+const RELEASE_TAG_URL: &str = "https://github.com/olegperegudov/camel/releases/tag";
+
 struct AppState {
     reading: Mutex<limits::Reading>,
     update_badge: AtomicBool,
@@ -355,11 +359,14 @@ pub fn run() {
 /// then quit. The panel itself hangs on the left click.
 fn build_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let update = MenuItem::with_id(app, "update", "Check for updates", true, None::<&str>)?;
+    // The version is a way in, not a label: it opens this build's release page,
+    // where the changelog's bullets say what it changed. Deciding whether an
+    // update is worth installing used to mean going and finding that out.
     let version = MenuItem::with_id(
         app,
         "version",
         format!("Camel v{}", env!("CARGO_PKG_VERSION")),
-        false,
+        true,
         None::<&str>,
     )?;
     let quit = MenuItem::with_id(app, "quit", "Quit Camel", true, None::<&str>)?;
@@ -394,6 +401,13 @@ fn build_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                 tauri::async_runtime::spawn(async move {
                     on_update_clicked(app).await;
                 });
+            }
+            "version" => {
+                use tauri_plugin_opener::OpenerExt;
+                let url = format!("{}/v{}", RELEASE_TAG_URL, env!("CARGO_PKG_VERSION"));
+                if let Err(e) = app.opener().open_url(url, None::<&str>) {
+                    debug_log::log(&format!("opening the release page failed: {}", e));
+                }
             }
             "quit" => app.exit(0),
             _ => {}

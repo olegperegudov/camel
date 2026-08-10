@@ -2,27 +2,39 @@
 
 ## Unreleased
 
-- Each line is now measured. A dim bed draws the whole window behind the bar,
-  and three hairline notches cut bed and bar alike into quarters — 0.1.11
-  removed the track for being a second shape to compare, but with nothing to
-  measure against, 60% and 90% looked the same. A reading is now "past the
-  second notch", not a guess. Colours are unchanged: yellow at half spent, red
-  at three quarters.
-- The footer is gone. Version and updates live in the right-click menu, and
-  repeating them under every reading was the panel talking about itself.
-- Freshness is now the disclaimer it always was: nothing while the numbers
-  describe the session in front of you, one amber line once the status line
-  has been quiet for half an hour.
-- The panel is the size of what it holds. Its floor was 120 px against 80 px
-  of content, the line stopped short of the right margin, and the countdowns
-  ended each row wherever their text ran out. Now the line takes the width the
-  name and the countdown leave, the countdowns share one right-aligned column,
-  and the window closes on the last row.
-- The tray icon draws two pills instead of two rectangles, antialiased, badge
-  included. An almost-empty window keeps a full round end rather than a sliver
-  clipped by the cap — a fault, not an empty tank, is what a sliver reads as.
+- Clicking the version in the tray menu opens this build's release page, where
+  the list of what changed in it lives.
 
-## 0.1.12 — 2026-08-06
+  The item used to be a disabled label, and the releases it pointed at had no
+  notes: the workflow now cuts them from this file's Unreleased section on
+  every bump, so a build cannot ship without saying what it changed.
+
+## v0.1.14 — 2026-08-10
+
+- The panel no longer has empty space under the rows or beside them.
+- The line stretches the full width, so a reading is a little finer.
+- Both countdowns line up in one column on the right.
+
+  The window's floor was 120 px against 80 px of content, and the line was a
+  fixed 176 px while the countdowns ended each row wherever their text ran out.
+
+## v0.1.13 — 2026-08-10
+
+- Each line is cut into quarters, so you can see whether you are past a quarter,
+  half or three quarters instead of estimating it.
+- The version and update line under the bars is gone — both live in the
+  right-click menu.
+- If Claude Code has been quiet for half an hour, the panel says how old the
+  numbers are instead of showing them as current.
+- The menu-bar icon draws two rounded pills with smooth edges.
+
+  0.1.11 removed the track behind the bar for being a second shape to compare;
+  with nothing to measure against, 60% and 90% read the same. The bed is back,
+  dim, with hairline notches cutting it and the bar alike. An almost-empty
+  window keeps a full round end in the icon — a sliver clipped by the cap reads
+  as a fault, not as an empty tank.
+
+## v0.1.12 — 2026-08-06
 
 - The window name moved onto the line's row: `5h ——————— 2h`. Stacking it above
   cost the panel twice its height for two characters, and the panel is a
@@ -30,7 +42,7 @@
   as tall now, with nothing dropped. The names sit in a fixed-width column so
   both lines start at the same x and their lengths stay comparable.
 
-## 0.1.11 — 2026-08-06
+## v0.1.11 — 2026-08-06
 
 The panel is down to what it is actually read for: one line per window, its
 length what's left, and beside it how long that has to last.
@@ -50,7 +62,7 @@ length what's left, and beside it how long that has to last.
 - Countdowns are compact: "47m", "1h 31m", "4d". Still truncating, never
   rounding up — 91 minutes must not read as two hours on a five-hour budget.
 
-## 0.1.10 — 2026-08-06
+## v0.1.10 — 2026-08-06
 
 - The forecast says it is still counting instead of showing nothing. An update
   restarts the app, which empties the sample buffer — so the first three
@@ -59,7 +71,7 @@ length what's left, and beside it how long that has to last.
   done nothing. It now reads "Working out your pace — 2 min to go", and only a
   reading-less app shows no line at all.
 
-## 0.1.9 — 2026-08-06
+## v0.1.9 — 2026-08-06
 
 - Fix, caught by watching the forecast against live data: these windows
   *roll*, so the remaining percent climbs on its own as old usage ages out
@@ -72,7 +84,7 @@ length what's left, and beside it how long that has to last.
   or that usage is ageing out as fast as it arrives; the panel reports the
   level it can see, not a guess about the person.
 
-## 0.1.8 — 2026-08-06
+## v0.1.8 — 2026-08-06
 
 Design critique of the panel (`/impeccable critique`, scored 20/40) turned up
 three things the panel was getting wrong at exactly the moments it is trusted
@@ -130,7 +142,7 @@ out, and the one answer no generic usage widget could ship.
   was maintained by hand against copy it could not measure, and the first
   verdict that wrapped to two lines cut the footer off.
 
-## 0.1.6 — 2026-08-05
+## v0.1.6 — 2026-08-05
 
 - Left click finally opens the panel. The panel is now a non-activating
   NSPanel (the Spotlight mechanism, same as Iago): an ordinary window of a
@@ -140,7 +152,7 @@ out, and the one answer no generic usage widget could ship.
 - Right-click menu slimmed to update / version / quit: "Show limits"
   duplicated the left click and is gone.
 
-## 0.1.5 — 2026-08-05
+## v0.1.5 — 2026-08-05
 
 - Tray is bars only (as designed): the percent moved to the hover tooltip and
   the panel. Red now starts at three quarters spent (was 80%).
@@ -148,12 +160,12 @@ out, and the one answer no generic usage widget could ship.
   either, debounced), and a "Show limits" menu item backs the gesture up.
 - Tray click events are logged.
 
-## 0.1.2 — 2026-08-05
+## v0.1.2 — 2026-08-05
 
 - Fix: fractional `used_percentage` (e.g. `7.0`) parsed as no-data — the tray
   fell back to grey bars whenever Claude Code wrote floats. Regression test.
 
-## 0.1.0 — 2026-08-05
+## v0.1.0 — 2026-08-05
 
 First release.
 
