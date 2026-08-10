@@ -1,6 +1,6 @@
 [package]
 name = "camel"
-version = "0.1.12"
+version = "0.1.13"
 description = "Claude Code usage limits in the menu bar"
 authors = ["Oleg Peregudov"]
 edition = "2021"
