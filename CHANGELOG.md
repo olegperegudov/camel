@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.1.15 — 2026-08-10
+
 - Clicking the version in the tray menu opens this build's release page, where
   the list of what changed in it lives.
 
