@@ -37,9 +37,11 @@ const PANEL_H: f64 = 80.0;
 /// with the two lines a status line needs.
 const SETUP_GUIDE: &str = "https://github.com/olegperegudov/camel#where-the-numbers-come-from";
 
-/// Release pages, one per tag: the menu appends `v{version}` to reach the one
-/// this build came from.
-const RELEASE_TAG_URL: &str = "https://github.com/olegperegudov/camel/releases/tag";
+/// The release list. The version item opens it rather than this build's own
+/// tag: the click happens when an update has been offered, and the list has
+/// the offered version on top and the installed one below, each with its
+/// bullets.
+const RELEASES_URL: &str = "https://github.com/olegperegudov/camel/releases";
 
 struct AppState {
     reading: Mutex<limits::Reading>,
@@ -359,9 +361,9 @@ pub fn run() {
 /// then quit. The panel itself hangs on the left click.
 fn build_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let update = MenuItem::with_id(app, "update", "Check for updates", true, None::<&str>)?;
-    // The version is a way in, not a label: it opens this build's release page,
-    // where the changelog's bullets say what it changed. Deciding whether an
-    // update is worth installing used to mean going and finding that out.
+    // The version is a way in, not a label: it opens the release list, where
+    // every build says what changed in it. Deciding whether an update is worth
+    // installing used to mean going and finding that out.
     let version = MenuItem::with_id(
         app,
         "version",
@@ -404,9 +406,8 @@ fn build_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             }
             "version" => {
                 use tauri_plugin_opener::OpenerExt;
-                let url = format!("{}/v{}", RELEASE_TAG_URL, env!("CARGO_PKG_VERSION"));
-                if let Err(e) = app.opener().open_url(url, None::<&str>) {
-                    debug_log::log(&format!("opening the release page failed: {}", e));
+                if let Err(e) = app.opener().open_url(RELEASES_URL, None::<&str>) {
+                    debug_log::log(&format!("opening the release list failed: {}", e));
                 }
             }
             "quit" => app.exit(0),

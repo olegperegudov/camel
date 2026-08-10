@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- The version in the tray menu opens the release list, where the version being
+  offered sits on top of the one installed.
+
 ## v0.1.15 — 2026-08-10
 
 - Clicking the version in the tray menu opens this build's release page, where

@@ -391,7 +391,7 @@ dependencies = [
 
 [[package]]
 name = "camel"
-version = "0.1.13"
+version = "0.1.15"
 dependencies = [
  "block",
  "cocoa",
