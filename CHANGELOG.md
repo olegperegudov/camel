@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.1.20 — 2026-08-12
+
 - Camel now tracks every Claude Code login on the machine, not just the personal
   one.
     - A Mac can hold several logins, each with its own config directory and its
