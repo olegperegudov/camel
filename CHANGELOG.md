@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.1.21 — 2026-08-12
+
 - Setting Camel up is one message to an agent now, instead of an afternoon of
   shell.
     - `SETUP.md` is written for a coding agent to follow: which config
