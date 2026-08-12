@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Setting Camel up is one message to an agent now, instead of an afternoon of
+  shell.
+    - `SETUP.md` is written for a coding agent to follow: which config
+      directories to look in, what to add to an existing status line without
+      breaking it, how to register it, and how to check the result. Anyone who
+      installs a Claude Code widget already has an agent that can do this, so
+      the README asks it rather than asking them. The panel's "How to set it
+      up" button opens the same page, and the hand-written version stays where
+      it was for anyone who prefers it.
+
 ## v0.1.20 — 2026-08-12
 
 - Camel now tracks every Claude Code login on the machine, not just the personal

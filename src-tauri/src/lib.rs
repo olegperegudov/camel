@@ -35,7 +35,10 @@ const PANEL_H: f64 = 80.0;
 
 /// Where the panel's "how do I set this up?" button lands: the README section
 /// with the two lines a status line needs.
-const SETUP_GUIDE: &str = "https://github.com/olegperegudov/camel#where-the-numbers-come-from";
+/// The setup page is written for an agent to follow, since that is the way out
+/// of the empty state that takes the user one message instead of an afternoon
+/// of shell. It reads fine by hand too.
+const SETUP_GUIDE: &str = "https://github.com/olegperegudov/camel/blob/main/SETUP.md";
 
 /// The release list. The version item opens it rather than this build's own
 /// tag: the click happens when an update has been offered, and the list has

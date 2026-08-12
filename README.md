@@ -6,6 +6,8 @@
 
 <p align="center">Your Claude Code usage limits, always in the menu bar.</p>
 
+<p align="center">Install it, then ask your agent to read <a href="SETUP.md">SETUP.md</a> — it wires itself up.</p>
+
 <p align="center">
   <b>Free · Private · Reads one local file, sends nothing anywhere</b>
 </p>
@@ -29,8 +31,22 @@ After downloading:
 1. Let macOS run it. Gatekeeper calls unnotarized apps "damaged" — run
    `xattr -dr com.apple.quarantine /Applications/Camel.app` once, or use
    System Settings → Privacy & Security → **Open Anyway** after the first block.
-2. Make sure your Claude Code status line writes `statusline-last.json` next to its config (see below).
+2. Connect it to Claude Code — one message, see below.
 3. Look at the menu bar — the gauges are already yours.
+
+### Let your agent wire it up
+
+Camel needs your Claude Code status line to save what it is handed. You already
+have an agent that can do that. Open Claude Code anywhere and paste:
+
+> Set up Camel by following
+> https://raw.githubusercontent.com/olegperegudov/camel/main/SETUP.md
+
+[SETUP.md](SETUP.md) is written for the agent, not for you: it says which config
+directories to look in, what to add to an existing status line without breaking
+it, how to register it, and how to verify the result. Prefer to do it by hand?
+The same thing in two lines is further down, under
+[Where the numbers come from](#where-the-numbers-come-from).
 
 ## Two gauges, zero clicks
 
