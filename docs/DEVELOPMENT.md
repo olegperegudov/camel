@@ -12,7 +12,7 @@ src/format.js         pure formatting (reset times, ages, thresholds) — vitest
 src/camel.png         master icon; `npx tauri icon src/camel.png` rebuilds icons/
 src-tauri/src/
   lib.rs              setup, tray, panel window, commands, pollers
-  limits.rs           reads/parses ~/.claude/statusline-last.json — cargo tests
+  limits.rs           finds every ~/.claude*/statusline-last.json, parses it — cargo tests
   tray_icon.rs        runtime-drawn bar icon + update badge — cargo tests
   private.rs          0600/0700 file writes (the debug log goes through it)
   debug_log.rs        fresh-per-launch event log in the app data dir
@@ -20,7 +20,7 @@ src-tauri/src/
 
 ## Data source
 
-`$HOME/.claude/statusline-last.json`, written by the user's Claude Code
+`$HOME/.claude*/statusline-last.json` — one per login — written by the user's Claude Code
 statusline script. Camel polls it every 30 s (mtime first), interprets
 `rate_limits.{five_hour,seven_day}.{used_percentage,resets_at}` and shows
 *remaining* percent.

@@ -7,34 +7,27 @@
 </head>
 <body>
   <main class="panel">
-    <section id="rows" hidden>
-      <!-- Name, line, time on one row: the reading is three things wide and
-           one thing tall. The words a screen reader needs live in the label,
-           since "5h" alone says nothing out loud. -->
-      <div class="row" id="row-five">
-        <span class="name">5h</span>
-        <span class="gauge">
-          <span class="bar" role="progressbar" aria-label="last 5 hours" aria-valuemin="0" aria-valuemax="100"></span>
-        </span>
-        <span class="until"></span>
-      </div>
-      <div class="row" id="row-seven">
-        <span class="name">7d</span>
-        <span class="gauge">
-          <span class="bar" role="progressbar" aria-label="last 7 days" aria-valuemin="0" aria-valuemax="100"></span>
-        </span>
-        <span class="until"></span>
-      </div>
-    </section>
-    <!-- Only when the numbers have gone cold: fresh readings need no
-         disclaimer, stale ones have to say so. -->
-    <p id="stale" hidden></p>
+    <!-- One group per login, built from the reading: a machine can hold one
+         account or several, and the panel has no business deciding which. -->
+    <section id="accounts" hidden></section>
     <section id="empty" hidden>
       <p id="empty-head"></p>
       <p class="how" id="empty-how"></p>
       <button id="setup">How to set it up</button>
     </section>
   </main>
+  <template id="account-row">
+    <!-- Name, line, time on one row: the reading is three things wide and
+         one thing tall. The words a screen reader needs live in the label,
+         since "5h" alone says nothing out loud. -->
+    <div class="row">
+      <span class="name"></span>
+      <span class="gauge">
+        <span class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"></span>
+      </span>
+      <span class="until"></span>
+    </div>
+  </template>
   <script type="module" src="main.js"></script>
 </body>
 </html>

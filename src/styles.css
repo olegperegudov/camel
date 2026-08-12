@@ -32,10 +32,34 @@ html, body {
    the empty state showed hollow bars behind its own message that way. */
 [hidden] { display: none !important; }
 
-#rows {
+#accounts {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
+}
+
+/* One login's block: its rows sit tighter to each other than the blocks do to
+   each other, so two accounts read as two things without a rule between them. */
+.account {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+/* Whose numbers these are. Quiet and small: the name is a signpost, and the
+   lengths underneath are what the panel is actually for. */
+.who {
+  font-size: 10.5px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #6b727d;
+}
+
+/* An account that has a config but never a session. */
+.quiet {
+  margin: 0;
+  color: #6b727d;
+  font-size: 12px;
 }
 
 /* Name, line and time on one row. Stacking them cost the panel twice its
@@ -149,7 +173,7 @@ html, body {
 /* The disclaimer, and only when it is owed: numbers this old describe a
    session that has since moved on. Amber, not red — the reading is old, not
    wrong. Tabular digits so the minute count does not jitter the line. */
-#stale {
+.stale {
   margin: 0;
   display: flex;
   align-items: center;
@@ -158,7 +182,7 @@ html, body {
   font-size: 11.5px;
   font-variant-numeric: tabular-nums;
 }
-#stale::before {
+.stale::before {
   content: "";
   width: 5px;
   height: 5px;

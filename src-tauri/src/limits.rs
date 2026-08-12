@@ -2,11 +2,17 @@
 //! left in the 5-hour and 7-day windows, and when each window resets.
 //!
 //! The source is the JSON that Claude Code hands to its status line, which the
-//! user's statusline script mirrors to `~/.claude/statusline-last.json`. Camel
-//! only ever reads that file — it talks to no network and holds no credentials.
+//! user's statusline script mirrors next to its own config as
+//! `statusline-last.json`. Camel only ever reads those files — it talks to no
+//! network and holds no credentials.
+//!
+//! One machine can hold several logins, each with its own config directory and
+//! its own subscription: `~/.claude` for the personal one, `~/.claude-work` for
+//! a work account. Camel reads every one it finds rather than a fixed path, so
+//! a login added later shows up without touching this code.
 
 use serde::Serialize;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Remaining percentage at which the bar turns yellow / red: yellow once
@@ -64,11 +70,15 @@ pub fn level(remaining: u8) -> Level {
     }
 }
 
-/// Where Claude Code's status line data lives, on any OS. The path is derived
-/// from the OS home dir — never spelled out.
-pub fn source_path() -> Option<PathBuf> {
-    dirs::home_dir().map(|h| h.join(".claude").join("statusline-last.json"))
+/// One Claude Code login: what to call it, and what its status line last said.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct Account {
+    /// Short name shown above the account's rows: "personal", "work".
+    pub label: String,
+    pub reading: Reading,
 }
+
+pub const SOURCE_FILE: &str = "statusline-last.json";
 
 pub fn now_secs() -> i64 {
     SystemTime::now()
@@ -77,11 +87,53 @@ pub fn now_secs() -> i64 {
         .unwrap_or(0)
 }
 
-/// Read and interpret the source file at its usual place.
-pub fn read() -> Reading {
-    match source_path() {
-        Some(path) => read_at_path(&path),
-        None => Reading::Missing,
+/// Every login that has ever written a status line, personal first.
+///
+/// Empty means no config directory carries the file — the panel then says how
+/// to set the status line up, same as a single account that never wrote one.
+pub fn read() -> Vec<Account> {
+    match dirs::home_dir() {
+        Some(home) => read_in_home(&home),
+        None => Vec::new(),
+    }
+}
+
+/// The disk half, taking the home directory as an argument so a test can hand
+/// it a directory it built itself.
+pub fn read_in_home(home: &Path) -> Vec<Account> {
+    let Ok(entries) = std::fs::read_dir(home) else {
+        return Vec::new();
+    };
+    let mut found: Vec<Account> = entries
+        .flatten()
+        .filter_map(|entry| {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            let source = entry.path().join(SOURCE_FILE);
+            // A config dir without the file is a login that never ran a session
+            // with the status line — nothing to show, and an empty row would
+            // only be noise next to the accounts that do have numbers.
+            label_of(&name).filter(|_| source.is_file()).map(|label| Account {
+                label,
+                reading: read_at_path(&source),
+            })
+        })
+        .collect();
+    // Personal first, the rest alphabetically: the order has to be the same on
+    // every launch, or the two bars in the menu bar would swap meaning.
+    found.sort_by(|a, b| (a.label != "personal", &a.label).cmp(&(b.label != "personal", &b.label)));
+    found
+}
+
+/// What to call the login living in this directory, or None if the directory is
+/// not a Claude Code config at all. `.claude` is the personal one; anything
+/// after the name — `.claude-work` — is the label itself.
+fn label_of(dir_name: &str) -> Option<String> {
+    match dir_name.strip_prefix(".claude")? {
+        "" => Some("personal".to_string()),
+        rest => {
+            let name = rest.trim_start_matches(['-', '_']);
+            (!name.is_empty()).then(|| name.to_string())
+        }
     }
 }
 
@@ -218,6 +270,42 @@ mod tests {
         assert!(matches!(read_at_path(&good), Reading::Ok(_)));
 
         std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn every_login_with_a_status_line_becomes_an_account_personal_first() {
+        // Two logins on one machine, plus a config that never ran a session and
+        // a directory that is not Claude Code's at all.
+        let home = std::env::temp_dir().join("camel-accounts-test");
+        std::fs::remove_dir_all(&home).ok();
+        for (dir, file) in [
+            (".claude", true),
+            (".claude-work", true),
+            (".claude-spare", false),
+            (".config", true),
+        ] {
+            std::fs::create_dir_all(home.join(dir)).unwrap();
+            if file {
+                std::fs::write(home.join(dir).join(SOURCE_FILE), RAW).unwrap();
+            }
+        }
+
+        let found = read_in_home(&home);
+        let labels: Vec<&str> = found.iter().map(|a| a.label.as_str()).collect();
+        assert_eq!(labels, ["personal", "work"]);
+        assert!(matches!(found[0].reading, Reading::Ok(_)));
+
+        std::fs::remove_dir_all(&home).ok();
+    }
+
+    #[test]
+    fn a_home_without_any_config_reads_as_no_accounts() {
+        // Not an error and not a zero: the panel says how to set the status
+        // line up, which is a different sentence from "you have no quota left".
+        let home = std::env::temp_dir().join("camel-empty-home-test");
+        std::fs::create_dir_all(&home).unwrap();
+        assert!(read_in_home(&home).is_empty());
+        std::fs::remove_dir_all(&home).ok();
     }
 
     #[test]

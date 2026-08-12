@@ -29,7 +29,7 @@ After downloading:
 1. Let macOS run it. Gatekeeper calls unnotarized apps "damaged" — run
    `xattr -dr com.apple.quarantine /Applications/Camel.app` once, or use
    System Settings → Privacy & Security → **Open Anyway** after the first block.
-2. Make sure your Claude Code status line writes `~/.claude/statusline-last.json` (see below).
+2. Make sure your Claude Code status line writes `statusline-last.json` next to its config (see below).
 3. Look at the menu bar — the gauges are already yours.
 
 ## Two gauges, zero clicks
@@ -37,6 +37,11 @@ After downloading:
 The left pill is your last 5 hours, the right one your last 7 days. Green means
 plenty, yellow means half is gone, red means three quarters are. Hover for the
 exact numbers. A green dot on the icon means a Camel update is ready.
+
+Signed into Claude Code more than once — a personal account and a work one? Each
+login gets its own pair of pills, side by side, with a wider gap between the
+pairs than inside them. The panel lists them by name, and each is dated on its
+own: one can be minutes old while the other has been idle since yesterday.
 
 <p align="center"><img src="docs/screenshots/menubar-pills.png" width="380" alt="Menu bar states: fine, running low, update ready" /></p>
 
@@ -64,18 +69,23 @@ countdown would be — nothing has scheduled the next reset yet.
 ## Where the numbers come from
 
 Claude Code hands its status line a JSON with your rate limits. Camel reads
-the copy of it at `~/.claude/statusline-last.json` — a two-line addition to
-any statusline script:
+the copy of it at `statusline-last.json` — a few lines added to any statusline
+script:
 
 ```bash
-# inside your ~/.claude/statusline.sh, before printing:
+# inside your statusline.sh, before printing:
+# Write next to the config this session belongs to, not to a fixed path: with
+# more than one login on the machine they would take turns overwriting one file.
+config=$(printf '%s' "$input" | jq -r '.transcript_path // empty' | sed -n 's|\(.*\)/projects/.*|\1|p')
+[ -z "$config" ] && config="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+
 if printf '%s' "$input" | jq -e '.rate_limits.five_hour.used_percentage != null' >/dev/null 2>&1; then
-  printf '%s' "$input" > ~/.claude/statusline-last.json
+  printf '%s' "$input" > "$config/statusline-last.json"
 fi
 ```
 
 No statusline yet? Run `/statusline` in Claude Code and ask it to save its
-input JSON to `~/.claude/statusline-last.json`.
+input JSON as `statusline-last.json` inside its own config directory.
 
 Until that file exists, Camel says so and offers the way out — it never shows
 a zero it doesn't have.
@@ -96,7 +106,8 @@ are on lives in the same menu, which is why the panel itself stays wordless.
 
 ## Privacy
 
-- Reads exactly one file: `~/.claude/statusline-last.json`. Nothing else.
+- Reads exactly one file per login: `statusline-last.json` inside each Claude Code
+  config directory it finds in your home. Nothing else.
 - Sends nothing anywhere. The only network call is checking GitHub for its own updates.
 - No analytics, no telemetry, no accounts.
 

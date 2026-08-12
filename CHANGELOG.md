@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- Camel now tracks every Claude Code login on the machine, not just the personal
+  one.
+    - A Mac can hold several logins, each with its own config directory and its
+      own subscription — `~/.claude` alongside `~/.claude-work`. Both wrote
+      their limits into the same file, so the widget showed whichever session
+      spoke last and could not tell them apart at all. The status line now
+      writes `statusline-last.json` next to its own config, and Camel reads
+      every one it finds; a login added later needs no code change.
+    - The menu bar shows a pair of pills per account — 5 hours and the week —
+      with a wider gap between accounts than inside one, so a glance says both
+      which login is running out and which of its windows. A single login keeps
+      the icon exactly as it was: the canvas only widens when there is a second
+      account to draw. The tooltip names each account on its own line.
+    - The panel groups its rows under the account name and dates each group
+      separately: the work login can sit untouched for a day while the personal
+      one is mid-session, and one shared freshness note lied about both. One
+      login shows no heading — naming it when there is nothing to tell it apart
+      from is a label doing no work. A login that has a config but never ran a
+      session says so instead of drawing empty bars.
+
 ## v0.1.19 — 2026-08-11
 
 - An update is now offered only after that exact build has been installed and

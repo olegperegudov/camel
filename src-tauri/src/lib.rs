@@ -44,7 +44,7 @@ const SETUP_GUIDE: &str = "https://github.com/olegperegudov/camel#where-the-numb
 const RELEASES_URL: &str = "https://github.com/olegperegudov/camel/releases";
 
 struct AppState {
-    reading: Mutex<limits::Reading>,
+    accounts: Mutex<Vec<limits::Account>>,
     update_badge: AtomicBool,
     update_version: Mutex<Option<String>>,
     /// macOS delivers tray clicks inconsistently across versions — some send
@@ -58,18 +58,14 @@ struct AppState {
     panel_shown_at: Mutex<Option<std::time::Instant>>,
 }
 
-/// Everything the panel shows, in one payload: both windows, freshness, the
-/// app version and a pending update if one was found.
+/// Everything the panel shows, in one payload: every account with its two
+/// windows and freshness, the app version and a pending update if one was found.
 #[tauri::command]
 fn get_limits(state: tauri::State<AppState>) -> serde_json::Value {
-    let reading = state
-        .reading
-        .lock()
-        .map(|g| *g)
-        .unwrap_or(limits::Reading::Missing);
+    let accounts = state.accounts.lock().map(|g| g.clone()).unwrap_or_default();
     let update = state.update_version.lock().ok().and_then(|g| g.clone());
     serde_json::json!({
-        "reading": reading,
+        "accounts": accounts,
         "now": limits::now_secs(),
         "version": env!("CARGO_PKG_VERSION"),
         "update": update,
@@ -130,7 +126,7 @@ async fn install_update(app: AppHandle) -> Result<(), String> {
 fn refresh(app: &AppHandle) {
     let Some(state) = app.try_state::<AppState>() else { return };
     let fresh = limits::read();
-    let changed = match state.reading.lock() {
+    let changed = match state.accounts.lock() {
         Ok(mut g) => {
             let changed = *g != fresh;
             *g = fresh;
@@ -144,42 +140,61 @@ fn refresh(app: &AppHandle) {
     }
 }
 
-/// Draw the current numbers into the menu bar: bar icon plus the worst
-/// remaining percent as the title. One function so the poller, the updater
-/// badge and startup all paint the same way.
+/// Draw the current numbers into the menu bar: a pair of bars per account,
+/// the numbers themselves one hover away. One function so the poller, the
+/// updater badge and startup all paint the same way.
 fn apply_tray(app: &AppHandle) {
     let Some(state) = app.try_state::<AppState>() else { return };
-    let snapshot = match state.reading.lock().map(|g| *g) {
-        Ok(limits::Reading::Ok(s)) => Some(s),
-        _ => None,
-    };
+    let accounts = state.accounts.lock().map(|g| g.clone()).unwrap_or_default();
     let badge = state.update_badge.load(Ordering::Relaxed);
-    let bars = snapshot.map(|s| (s.five_hour.remaining, s.seven_day.remaining));
-    let rgba = tray_icon::render(bars, badge);
-    let icon =
-        tauri::image::Image::new_owned(rgba, tray_icon::SIDE as u32, tray_icon::SIDE as u32);
+    // Only accounts whose file we could actually read get a pair of bars: a
+    // login that never wrote a status line would otherwise sit in the menu bar
+    // as two grey pills forever, and grey means "broken", not "not used yet".
+    let readable: Vec<&limits::Account> = accounts
+        .iter()
+        .filter(|a| matches!(a.reading, limits::Reading::Ok(_)))
+        .collect();
+    let bars: Vec<(u8, u8)> = readable
+        .iter()
+        .filter_map(|a| match a.reading {
+            limits::Reading::Ok(s) => Some((s.five_hour.remaining, s.seven_day.remaining)),
+            _ => None,
+        })
+        .collect();
+    let drawn = tray_icon::render(&bars, badge);
+    let icon = tauri::image::Image::new_owned(
+        drawn.pixels,
+        drawn.width as u32,
+        tray_icon::HEIGHT as u32,
+    );
     match app.tray_by_id("main") {
         Some(tray) => {
             if let Err(e) = tray.set_icon(Some(icon)) {
                 debug_log::log(&format!("tray: set_icon failed: {}", e));
             }
-            // Bars only in the bar itself; the numbers live one hover away.
-            // Same window names as the panel — one vocabulary, three surfaces.
-            let tip = match snapshot {
-                Some(s) => format!(
-                    "Camel — last 5 hours: {}% left · last 7 days: {}% left",
-                    s.five_hour.remaining, s.seven_day.remaining
-                ),
-                None => "Camel — no limit data yet".to_string(),
-            };
-            let _ = tray.set_tooltip(Some(tip));
-            debug_log::log(&format!(
-                "tray painted: bars {:?}, badge {}",
-                bars, badge
-            ));
+            let _ = tray.set_tooltip(Some(tooltip(&readable)));
+            debug_log::log(&format!("tray painted: bars {:?}, badge {}", bars, badge));
         }
         None => debug_log::log("tray: no tray with id 'main'"),
     }
+}
+
+/// The hover text: one line per account, named, so two pairs of bars are not a
+/// riddle. Same window names as the panel — one vocabulary, three surfaces.
+fn tooltip(accounts: &[&limits::Account]) -> String {
+    if accounts.is_empty() {
+        return "Camel — no limit data yet".to_string();
+    }
+    let mut out = String::from("Camel");
+    for account in accounts {
+        if let limits::Reading::Ok(s) = account.reading {
+            out.push_str(&format!(
+                "\n{}: 5h {}% left · 7d {}% left",
+                account.label, s.five_hour.remaining, s.seven_day.remaining
+            ));
+        }
+    }
+    out
 }
 
 /// Light the badge and turn the menu's first item into the install action.
@@ -260,7 +275,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_nspanel_init())
         .manage(AppState {
-            reading: Mutex::new(limits::Reading::Missing),
+            accounts: Mutex::new(Vec::new()),
             update_badge: AtomicBool::new(false),
             update_version: Mutex::new(None),
             last_toggle: Mutex::new(None),
@@ -386,10 +401,11 @@ fn build_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     // The icon goes in at build time: a status item created empty gets a
     // zero-width button on macOS, and later set_icon calls paint nothing the
     // user can see. Grey bars until the first snapshot lands a moment later.
+    let blank = tray_icon::render(&[], false);
     let initial = tauri::image::Image::new_owned(
-        tray_icon::render(None, false),
-        tray_icon::SIDE as u32,
-        tray_icon::SIDE as u32,
+        blank.pixels,
+        blank.width as u32,
+        tray_icon::HEIGHT as u32,
     );
     TrayIconBuilder::with_id("main")
         .icon(initial)
