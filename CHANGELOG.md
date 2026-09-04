@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Fixed the Codex weekly line showing a model-specific allowance instead of
+  the account-wide limit shown by Codex. Camel now combines the active
+  five-hour model window with Codex's general seven-day window, so a separate
+  Spark allowance can no longer make the week look untouched.
+
 ## v0.1.23 — 2026-09-04
 
 - Fixed Codex usage when Camel is opened normally from Finder or at login.

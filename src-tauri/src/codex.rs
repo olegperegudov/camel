@@ -159,38 +159,37 @@ fn find_executable() -> Option<PathBuf> {
     })
 }
 
-/// Select the bucket that actually contains both subscription windows.
-/// Limit IDs are backend-owned and change with model families, so the window
-/// durations are the stable contract.
+/// Compose the snapshot from the account-wide week and the active model's
+/// short window. Codex reports model-specific windows in separate buckets;
+/// requiring both durations in one bucket can silently select a model's week
+/// instead of the account-wide limit shown by Codex itself.
 pub fn parse(result: &Value, now: i64) -> Option<Snapshot> {
-    let buckets = result["rateLimitsByLimitId"]
+    let general = result["rateLimitsByLimitId"]["codex"]
         .as_object()
-        .into_iter()
-        .flat_map(|map| map.values())
-        .chain(std::iter::once(&result["rateLimits"]));
+        .map(|_| &result["rateLimitsByLimitId"]["codex"])
+        .unwrap_or(&result["rateLimits"]);
+    let week = find_window(general, SEVEN_DAYS_MINS)?;
+    let five = std::iter::once(&result["rateLimits"])
+        .chain(
+            result["rateLimitsByLimitId"]
+                .as_object()
+                .into_iter()
+                .flat_map(|map| map.values()),
+        )
+        .find_map(|bucket| find_window(bucket, FIVE_HOURS_MINS))?;
 
-    for bucket in buckets {
-        let (Some(primary), Some(secondary)) =
-            (bucket.get("primary"), bucket.get("secondary"))
-        else {
-            continue;
-        };
-        let windows = [primary, secondary];
-        let five = windows
-            .iter()
-            .find(|w| w["windowDurationMins"].as_i64() == Some(FIVE_HOURS_MINS));
-        let week = windows
-            .iter()
-            .find(|w| w["windowDurationMins"].as_i64() == Some(SEVEN_DAYS_MINS));
-        if let (Some(five), Some(week)) = (five, week) {
-            return Some(Snapshot {
-                five_hour: parse_window(five, now)?,
-                seven_day: parse_window(week, now)?,
-                read_at: now,
-            });
-        }
-    }
-    None
+    Some(Snapshot {
+        five_hour: parse_window(five, now)?,
+        seven_day: parse_window(week, now)?,
+        read_at: now,
+    })
+}
+
+fn find_window(bucket: &Value, duration: i64) -> Option<&Value> {
+    [bucket.get("primary"), bucket.get("secondary")]
+        .into_iter()
+        .flatten()
+        .find(|window| window["windowDurationMins"].as_i64() == Some(duration))
 }
 
 fn parse_window(value: &Value, now: i64) -> Option<Window> {
@@ -221,7 +220,7 @@ mod tests {
     }
 
     #[test]
-    fn selects_the_bucket_with_both_real_windows_without_knowing_its_id() {
+    fn general_week_wins_over_a_model_specific_week() {
         let value = json!({
             "rateLimits": {"primary": {"usedPercent": 9, "windowDurationMins": 10080, "resetsAt": 4000}},
             "rateLimitsByLimitId": {
@@ -233,8 +232,37 @@ mod tests {
         });
         let snapshot = parse(&value, 1000).unwrap();
         assert_eq!(snapshot.five_hour.remaining, 83);
-        assert_eq!(snapshot.seven_day.remaining, 77);
+        assert_eq!(snapshot.seven_day.remaining, 91);
         assert_eq!(snapshot.read_at, 1000);
+    }
+
+    #[test]
+    fn combines_the_model_five_hour_window_with_the_general_codex_week() {
+        let value = json!({
+            "rateLimits": {
+                "limitId": "codex",
+                "primary": {"usedPercent": 16, "windowDurationMins": 10080, "resetsAt": 4000},
+                "secondary": null
+            },
+            "rateLimitsByLimitId": {
+                "codex": {
+                    "limitId": "codex",
+                    "primary": {"usedPercent": 16, "windowDurationMins": 10080, "resetsAt": 4000},
+                    "secondary": null
+                },
+                "codex_bengalfox": {
+                    "limitId": "codex_bengalfox",
+                    "limitName": "GPT-5.3-Codex-Spark",
+                    "primary": {"usedPercent": 0, "windowDurationMins": 300, "resetsAt": 2000},
+                    "secondary": {"usedPercent": 0, "windowDurationMins": 10080, "resetsAt": 5000}
+                }
+            }
+        });
+
+        let snapshot = parse(&value, 1000).unwrap();
+        assert_eq!(snapshot.five_hour.remaining, 100);
+        assert_eq!(snapshot.seven_day.remaining, 84);
+        assert_eq!(snapshot.seven_day.resets_at, 4000);
     }
 
     #[test]
