@@ -61,6 +61,8 @@ html, body {
   color: #6b727d;
   font-size: 12px;
 }
+.quiet.failed,
+.quiet.signedout { color: #d9b26a; }
 
 /* Name, line and time on one row. Stacking them cost the panel twice its
    height for two characters of label. */
@@ -149,7 +151,8 @@ html, body {
 
 /* The only button the panel can ever have: getting out of the empty state.
    Version and update live in the tray menu, where a right click finds them. */
-#setup {
+#setup,
+.inline-setup {
   font: inherit;
   border: 0;
   border-radius: 7px;
@@ -161,11 +164,13 @@ html, body {
   color: #ececf0;
   font-size: 12px;
 }
-#setup:hover { background: rgba(255, 255, 255, 0.14); }
+#setup:hover,
+.inline-setup:hover { background: rgba(255, 255, 255, 0.14); }
 
 /* outline:none above is for the mouse — WKWebView flashes a ring on
    programmatic focus. Keyboard focus still has to be visible. */
-#setup:focus-visible {
+#setup:focus-visible,
+.inline-setup:focus-visible {
   outline: 2px solid #8ab4ff;
   outline-offset: 2px;
 }

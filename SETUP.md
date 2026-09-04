@@ -95,10 +95,11 @@ settings points somewhere else.
 
 ## What Camel does with it
 
-Reads it, and nothing else — no network, no credentials, no telemetry. Each
-config directory becomes one account in the widget: a pair of bars in the menu
-bar (last 5 hours, last 7 days) and a named group in the panel. A login that has
-a config but has never written the file says "No sessions yet" rather than
-showing empty bars.
+Each config directory becomes one Claude Code account in the widget: a pair of
+bars in the menu bar (last 5 hours, last 7 days) and a named group in the panel.
+A login that has a config but has never written the file says "No sessions yet"
+rather than showing empty bars. Codex needs no setup here: when its CLI is
+installed and signed into ChatGPT, Camel asks it for the same two windows
+without reading or receiving its credentials.
 
 Do not report success until step 4 passes.

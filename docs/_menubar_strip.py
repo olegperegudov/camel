@@ -15,9 +15,9 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
 DUMP = ROOT / "src-tauri/target/icon-dump"
-STATES = ["ok", "low", "update"]
+STATES = ["ok", "low", "three-agents", "update"]
 
-W, H = 620, 64
+W, H = 760, 64
 ICON = 28
 TILE = (44, 40)
 BG = (27, 28, 31, 255)
@@ -26,8 +26,11 @@ CLOCK = "14:32"
 
 
 def load(name: str) -> Image.Image:
-    raw = (DUMP / f"{name}.rgba").read_bytes()
-    return Image.frombytes("RGBA", (32, 32), raw).resize((ICON, ICON), Image.LANCZOS)
+    source = next(DUMP.glob(f"{name}-*.rgba"))
+    width = int(source.stem.rsplit("-", 1)[1])
+    raw = source.read_bytes()
+    scaled_width = round(width * ICON / 32)
+    return Image.frombytes("RGBA", (width, 32), raw).resize((scaled_width, ICON), Image.LANCZOS)
 
 
 def font(size: int) -> ImageFont.FreeTypeFont:
@@ -48,21 +51,19 @@ def main(out: Path) -> None:
     # opaque white.
     tiles = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     tile_draw = ImageDraw.Draw(tiles)
-    x = 34
-    for name in STATES:
-        cx, cy = x + ICON // 2, H // 2
+    positions = [34, 194, 354, 574]
+    for x, name in zip(positions, STATES):
+        icon = load(name)
+        cx, cy = x + icon.width // 2, H // 2
         tile_draw.rounded_rectangle(
             (cx - TILE[0] // 2, cy - TILE[1] // 2, cx + TILE[0] // 2, cy + TILE[1] // 2),
             radius=9,
             fill=TILE_FILL,
         )
-        x += 168
     strip.alpha_composite(tiles)
 
-    x = 34
-    for name in STATES:
+    for x, name in zip(positions, STATES):
         strip.alpha_composite(load(name), (x, H // 2 - ICON // 2))
-        x += 168
 
     draw.text((W - 60, H // 2), CLOCK, font=font(20), fill=(236, 236, 240, 255), anchor="mm")
     strip.save(out)

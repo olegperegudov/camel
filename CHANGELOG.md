@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Codex now appears beside personal and work Claude Code as a third tracked
+  agent, with its real 5-hour and 7-day usage windows and reset countdowns.
+    - Camel asks the installed Codex CLI through its local app protocol, so the
+      current ChatGPT login stays inside Codex: no API key, copied token or UI
+      scraping. Loading, signed-out, missing-install and refresh failures each
+      say what happened without turning missing data into an empty quota.
+    - All agents feed the same two-window snapshot used by the tray and panel.
+      The development guide now has the short extension contract for adding the
+      next agent without teaching the interface another provider.
+
 ## v0.1.21 — 2026-08-12
 
 - Setting Camel up is one message to an agent now, instead of an afternoon of

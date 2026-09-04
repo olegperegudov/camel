@@ -1,14 +1,13 @@
-//! Camel — Claude Code usage limits in the menu bar.
+//! Camel — Claude Code and Codex usage limits in the menu bar.
 //!
-//! Shape of the thing: a poller reads the JSON that the user's Claude Code
-//! status line mirrors to disk, and turns it into two bars in the tray — the
-//! 5-hour window and the week, coloured by how much is left; the numbers
-//! themselves live one hover away, in the tooltip. Clicking the icon opens a
-//! small panel: a bar per window, its length what is left, and beside it how
-//! long that has to last. That's all the app does: read one local file, draw.
-//! No network apart from the updater.
+//! Each source returns the same two-window snapshot: Claude Code mirrors its
+//! status-line JSON to disk, while the installed Codex CLI supplies the signed-
+//! in ChatGPT account's live limits. Camel never handles either agent's
+//! credentials. The shared snapshots become pairs of bars in the tray and
+//! rows in the click panel.
 
 mod debug_log;
+mod codex;
 mod limits;
 mod mac_window;
 mod private;
@@ -47,7 +46,8 @@ const SETUP_GUIDE: &str = "https://github.com/olegperegudov/camel/blob/main/SETU
 const RELEASES_URL: &str = "https://github.com/olegperegudov/camel/releases";
 
 struct AppState {
-    accounts: Mutex<Vec<limits::Account>>,
+    claude_accounts: Mutex<Vec<limits::Account>>,
+    codex_account: Mutex<limits::Account>,
     update_badge: AtomicBool,
     update_version: Mutex<Option<String>>,
     /// macOS delivers tray clicks inconsistently across versions — some send
@@ -65,7 +65,7 @@ struct AppState {
 /// windows and freshness, the app version and a pending update if one was found.
 #[tauri::command]
 fn get_limits(state: tauri::State<AppState>) -> serde_json::Value {
-    let accounts = state.accounts.lock().map(|g| g.clone()).unwrap_or_default();
+    let accounts = all_accounts(&state);
     let update = state.update_version.lock().ok().and_then(|g| g.clone());
     serde_json::json!({
         "accounts": accounts,
@@ -129,10 +129,45 @@ async fn install_update(app: AppHandle) -> Result<(), String> {
 fn refresh(app: &AppHandle) {
     let Some(state) = app.try_state::<AppState>() else { return };
     let fresh = limits::read();
-    let changed = match state.accounts.lock() {
+    let changed = match state.claude_accounts.lock() {
         Ok(mut g) => {
             let changed = *g != fresh;
             *g = fresh;
+            changed
+        }
+        Err(_) => false,
+    };
+    if changed {
+        apply_tray(app);
+        let _ = app.emit("limits-changed", ());
+    }
+}
+
+fn all_accounts(state: &AppState) -> Vec<limits::Account> {
+    let mut accounts = state
+        .claude_accounts
+        .lock()
+        .map(|g| g.clone())
+        .unwrap_or_default();
+    if accounts.is_empty() {
+        accounts.push(limits::Account {
+            label: "personal".to_string(),
+            agent: "Claude Code".to_string(),
+            reading: limits::Reading::Missing,
+        });
+    }
+    if let Ok(codex) = state.codex_account.lock() {
+        accounts.push(codex.clone());
+    }
+    accounts
+}
+
+fn set_codex_reading(app: &AppHandle, reading: limits::Reading) {
+    let Some(state) = app.try_state::<AppState>() else { return };
+    let changed = match state.codex_account.lock() {
+        Ok(mut account) => {
+            let changed = account.reading != reading;
+            account.reading = reading;
             changed
         }
         Err(_) => false,
@@ -148,7 +183,7 @@ fn refresh(app: &AppHandle) {
 /// updater badge and startup all paint the same way.
 fn apply_tray(app: &AppHandle) {
     let Some(state) = app.try_state::<AppState>() else { return };
-    let accounts = state.accounts.lock().map(|g| g.clone()).unwrap_or_default();
+    let accounts = all_accounts(&state);
     let badge = state.update_badge.load(Ordering::Relaxed);
     // Only accounts whose file we could actually read get a pair of bars: a
     // login that never wrote a status line would otherwise sit in the menu bar
@@ -278,7 +313,12 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_nspanel_init())
         .manage(AppState {
-            accounts: Mutex::new(Vec::new()),
+            claude_accounts: Mutex::new(Vec::new()),
+            codex_account: Mutex::new(limits::Account {
+                label: "personal".to_string(),
+                agent: "Codex".to_string(),
+                reading: limits::Reading::Loading,
+            }),
             update_badge: AtomicBool::new(false),
             update_version: Mutex::new(None),
             last_toggle: Mutex::new(None),
@@ -311,6 +351,29 @@ pub fn run() {
             // First paint before the first poll tick.
             refresh(&handle);
             apply_tray(&handle);
+
+            let codex_handle = handle.clone();
+            tauri::async_runtime::spawn_blocking(move || {
+                let mut client: Option<codex::Client> = None;
+                loop {
+                    let reading = match client.as_mut() {
+                        Some(active) => active.read(limits::now_secs()),
+                        None => match codex::Client::connect() {
+                            Ok(mut connected) => {
+                                let reading = connected.read(limits::now_secs());
+                                client = Some(connected);
+                                reading
+                            }
+                            Err(state) => state,
+                        },
+                    };
+                    if matches!(reading, limits::Reading::Failed) {
+                        client = None;
+                    }
+                    set_codex_reading(&codex_handle, reading);
+                    std::thread::sleep(std::time::Duration::from_secs(POLL_SECS));
+                }
+            });
 
             let poll_handle = handle.clone();
             tauri::async_runtime::spawn(async move {
@@ -413,7 +476,7 @@ fn build_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     TrayIconBuilder::with_id("main")
         .icon(initial)
         .icon_as_template(false)
-        .tooltip("Camel — Claude Code limits")
+        .tooltip("Camel — agent limits")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(move |app, event| match event.id().as_ref() {

@@ -4,12 +4,12 @@
 
 <h1 align="center">Camel</h1>
 
-<p align="center">Your Claude Code usage limits, always in the menu bar.</p>
+<p align="center">Your Claude Code and Codex usage limits, always in the menu bar.</p>
 
 <p align="center">Install it, then ask your agent to read <a href="SETUP.md">SETUP.md</a> — it wires itself up.</p>
 
 <p align="center">
-  <b>Free · Private · Reads one local file, sends nothing anywhere</b>
+  <b>Free · Private · No copied keys · No telemetry</b>
 </p>
 
 ---
@@ -55,11 +55,12 @@ plenty, yellow means half is gone, red means three quarters are. Hover for the
 exact numbers. A green dot on the icon means a Camel update is ready.
 
 Signed into Claude Code more than once — a personal account and a work one? Each
-login gets its own pair of pills, side by side, with a wider gap between the
-pairs than inside them. The panel lists them by name, and each is dated on its
-own: one can be minutes old while the other has been idle since yesterday.
+login gets its own pair of pills. Codex joins them automatically when its CLI is
+installed and signed into ChatGPT. The panel names every agent, and each is
+dated on its own: one can be minutes old while another has been idle since
+yesterday.
 
-<p align="center"><img src="docs/screenshots/menubar-pills.png" width="380" alt="Menu bar states: fine, running low, update ready" /></p>
+<p align="center"><img src="docs/screenshots/menubar-agents.png" width="380" alt="Menu bar states including three tracked agents" /></p>
 
 ## Click for how long it has to last
 
@@ -71,6 +72,8 @@ Three hairline notches cut each line into quarters, so "past the halfway mark"
 is something you see rather than estimate.
 
 <p align="center"><img src="docs/screenshots/panel-quarters.png" width="320" alt="5h green past the third quarter with 2h beside it, 7d nearly full with 4d" /></p>
+
+<p align="center"><img src="docs/screenshots/panel-agents.png" width="320" alt="Personal Claude Code, work Claude Code and Codex, each with 5-hour and 7-day usage rows" /></p>
 
 The colour changes on its own: yellow once half the window is gone, red at
 three quarters. A short red line next to a small number is the whole warning.
@@ -122,10 +125,20 @@ are on lives in the same menu, which is why the panel itself stays wordless.
 
 ## Privacy
 
-- Reads exactly one file per login: `statusline-last.json` inside each Claude Code
-  config directory it finds in your home. Nothing else.
-- Sends nothing anywhere. The only network call is checking GitHub for its own updates.
-- No analytics, no telemetry, no accounts.
+- Reads exactly one file per Claude Code login: `statusline-last.json` inside
+  each config directory it finds in your home.
+- Asks the installed Codex CLI for the current ChatGPT account's limits. Codex
+  keeps the login; Camel never reads or receives its token.
+- Sends no analytics or telemetry. Network calls are Codex refreshing its own
+  usage and Camel checking GitHub for updates.
+
+### Adding another agent
+
+Add one small source that returns the shared snapshot — remaining percentage
+and reset time for the 5-hour and 7-day windows — then append it to the account
+list. The tray and panel already render that model; provider payloads and
+credentials stay inside the source. The exact contract is in
+[the development guide](docs/DEVELOPMENT.md#adding-another-agent).
 
 ## Under the hood
 

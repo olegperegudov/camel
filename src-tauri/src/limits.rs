@@ -51,6 +51,14 @@ pub enum Reading {
     Missing,
     /// The file exists but carries no rate limits we can read.
     Unreadable,
+    /// A live source is starting and has not answered yet.
+    Loading,
+    /// Codex is installed, but no ChatGPT account is signed in.
+    SignedOut,
+    /// The Codex command is not installed or cannot be launched.
+    Unavailable,
+    /// The live source answered with an error or timed out.
+    Failed,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -75,6 +83,8 @@ pub fn level(remaining: u8) -> Level {
 pub struct Account {
     /// Short name shown above the account's rows: "personal", "work".
     pub label: String,
+    /// Product name shown with the login label: "Claude Code" or "Codex".
+    pub agent: String,
     pub reading: Reading,
 }
 
@@ -114,6 +124,7 @@ pub fn read_in_home(home: &Path) -> Vec<Account> {
             // only be noise next to the accounts that do have numbers.
             label_of(&name).filter(|_| source.is_file()).map(|label| Account {
                 label,
+                agent: "Claude Code".to_string(),
                 reading: read_at_path(&source),
             })
         })

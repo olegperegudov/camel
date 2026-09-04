@@ -337,6 +337,7 @@ mod tests {
             ("low", vec![(9, 38)], false),
             ("update", vec![(73, 95)], true),
             ("two-accounts", vec![(41, 74), (88, 19)], false),
+            ("three-agents", vec![(41, 74), (88, 19), (99, 91)], false),
         ] {
             let icon = render(&accounts, badge);
             std::fs::write(dir.join(format!("{}-{}.rgba", name, icon.width)), icon.pixels).unwrap();

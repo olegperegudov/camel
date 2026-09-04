@@ -1,7 +1,7 @@
 [package]
 name = "camel"
 version = "0.1.21"
-description = "Claude Code usage limits in the menu bar"
+description = "Claude Code and Codex usage limits in the menu bar"
 authors = ["Oleg Peregudov"]
 edition = "2021"
 

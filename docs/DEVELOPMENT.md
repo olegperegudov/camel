@@ -13,6 +13,7 @@ src/camel.png         master icon; `npx tauri icon src/camel.png` rebuilds icons
 src-tauri/src/
   lib.rs              setup, tray, panel window, commands, pollers
   limits.rs           finds every ~/.claude*/statusline-last.json, parses it — cargo tests
+  codex.rs             asks the installed Codex CLI for the signed-in account's limits
   tray_icon.rs        runtime-drawn bar icon + update badge — cargo tests
   private.rs          0600/0700 file writes (the debug log goes through it)
   debug_log.rs        fresh-per-launch event log in the app data dir
@@ -35,6 +36,22 @@ A window whose `resets_at` has passed is reported full and flagged `refilled`:
 the quota did come back, and the timestamp in the file now names that refill
 rather than a future event. Without the flag the panel counted down to a
 moment in the past, forever, in confident green.
+
+Codex is a live source rather than a file adapter. Camel launches the installed
+`codex app-server`, which owns the current ChatGPT login, and calls its public
+`account/rateLimits/read` method once per poll. Camel never opens `auth.json`,
+never receives a token and never sends credentials through the webview. The
+child process stays alive between polls. Camel selects the bucket containing a
+300-minute and a 10,080-minute window; backend-owned bucket names are not part
+of the contract.
+
+### Adding another agent
+
+Keep the boundary small: add one source module that returns a `Reading` with a
+`Snapshot` (5-hour window, 7-day window, freshness), then append one `Account`
+in `all_accounts`. The tray and panel consume that shared model, so they need no
+agent-specific branches. A source owns authentication and parsing; UI code must
+never receive a credential or a provider payload.
 
 ## What the panel draws
 
@@ -91,7 +108,8 @@ Taken by the app's own code, not mocked up:
 - Panel states: `_camel_shot.mjs` (web_eye harness) serves `src/` over its own
   http server, stubs `window.__TAURI__`, sizes the viewport with the app's own
   `contentHeight()` and shoots
-  `panel / low / zero / refilled / stale / update / empty / unreadable`.
+  `panel / low / zero / refilled / stale / update / empty / unreadable /
+  agents / codex-loading / codex-error`.
   ```
   cd ~/membeme/system/tools/web_eye
   SHOT=low OUT=~/pets/camel/docs/screenshots/panel-rows-low.png node _camel_shot.mjs

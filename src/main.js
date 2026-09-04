@@ -54,17 +54,31 @@ function group(account, now, alone) {
   if (!alone) {
     const label = document.createElement('span');
     label.className = 'who';
-    label.textContent = account.label;
+    label.textContent = account.agent === 'Codex' ? 'Codex' : `${account.agent} · ${account.label}`;
     box.append(label);
   }
 
   const snapshot = account.reading.state === 'ok' ? account.reading.snapshot : null;
   if (!snapshot) {
     const line = document.createElement('p');
-    line.className = 'quiet';
-    line.textContent =
-      account.reading.state === 'unreadable' ? 'Limits not readable.' : 'No sessions yet.';
+    line.className = `quiet ${account.reading.state}`;
+    const copy = {
+      loading: 'Checking usage…',
+      signedout: 'Sign in to Codex to see limits.',
+      unavailable: 'Install Codex to see limits.',
+      failed: 'Couldn’t refresh usage. Trying again.',
+      unreadable: 'Limits not readable.',
+      missing: 'No limit data yet.',
+    };
+    line.textContent = copy[account.reading.state] ?? 'Limits not available.';
     box.append(line);
+    if (account.agent === 'Claude Code' && account.reading.state === 'missing') {
+      const setup = document.createElement('button');
+      setup.className = 'inline-setup';
+      setup.textContent = 'How to set it up';
+      setup.addEventListener('click', () => invoke('open_setup_guide'));
+      box.append(setup);
+    }
     return box;
   }
 
