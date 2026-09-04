@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.1.23 — 2026-09-04
+
 - Fixed Codex usage when Camel is opened normally from Finder or at login.
   macOS GUI apps do not inherit Homebrew's executable path; Camel found the
   Codex launcher but its sibling Node runtime was invisible, so every refresh
