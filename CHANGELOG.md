@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Fixed Codex usage when Camel is opened normally from Finder or at login.
+  macOS GUI apps do not inherit Homebrew's executable path; Camel found the
+  Codex launcher but its sibling Node runtime was invisible, so every refresh
+  failed. The launcher directory now travels with the child process, covered by
+  a regression test that starts from the restricted GUI path.
+
 ## v0.1.22 — 2026-09-04
 
 - Codex now appears beside personal and work Claude Code as a third tracked

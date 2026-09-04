@@ -7,8 +7,9 @@
 
 use crate::limits::{Reading, Snapshot, Window};
 use serde_json::{json, Value};
+use std::ffi::OsString;
 use std::io::{BufRead, BufReader, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::mpsc::{self, Receiver};
 use std::time::Duration;
@@ -27,13 +28,21 @@ pub struct Client {
 impl Client {
     pub fn connect() -> Result<Self, Reading> {
         let executable = find_executable().ok_or(Reading::Unavailable)?;
-        let mut child = Command::new(executable)
+        let path = child_path(&executable, std::env::var_os("PATH"))
+            .ok_or(Reading::Unavailable)?;
+        let mut command = Command::new(&executable);
+        command
+            // Homebrew's `codex` launcher uses `/usr/bin/env node`. Apps
+            // opened from Finder inherit only the system PATH, so include the
+            // launcher's directory for its sibling runtime as well.
+            .env("PATH", path)
             .args(["app-server", "--stdio"])
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             // App-server diagnostics may mention local configuration. Camel's
             // own log only records the state, never subprocess output.
-            .stderr(Stdio::null())
+            .stderr(Stdio::null());
+        let mut child = command
             .spawn()
             .map_err(|_| Reading::Unavailable)?;
         let stdin = child.stdin.take().ok_or(Reading::Failed)?;
@@ -103,6 +112,18 @@ impl Client {
             });
         }
     }
+}
+
+fn child_path(executable: &Path, current: Option<OsString>) -> Option<OsString> {
+    let mut paths = executable
+        .parent()
+        .into_iter()
+        .map(Path::to_path_buf)
+        .collect::<Vec<_>>();
+    if let Some(current) = current {
+        paths.extend(std::env::split_paths(&current));
+    }
+    std::env::join_paths(paths).ok()
 }
 
 impl Drop for Client {
@@ -186,6 +207,18 @@ fn parse_window(value: &Value, now: i64) -> Option<Window> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn gui_path_includes_the_codex_launchers_sibling_runtime() {
+        let executable = Path::new("/opt/homebrew/bin/codex");
+        let restricted = std::env::join_paths(["/usr/bin", "/bin"]).unwrap();
+        let result = child_path(executable, Some(restricted)).unwrap();
+        let paths = std::env::split_paths(&result).collect::<Vec<_>>();
+
+        assert_eq!(paths[0], Path::new("/opt/homebrew/bin"));
+        assert!(paths.contains(&PathBuf::from("/usr/bin")));
+        assert!(paths.contains(&PathBuf::from("/bin")));
+    }
 
     #[test]
     fn selects_the_bucket_with_both_real_windows_without_knowing_its_id() {
