@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.1.22 — 2026-09-04
+
 - Codex now appears beside personal and work Claude Code as a third tracked
   agent, with its real 5-hour and 7-day usage windows and reset countdowns.
     - Camel asks the installed Codex CLI through its local app protocol, so the
