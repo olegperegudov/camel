@@ -9,7 +9,7 @@ source, window behaviour, icons, CI and signing.
 
 Quick facts:
 
-- Run it: `npm install && npm run tauri dev`
+- Run it: `npm ci && npm run tauri dev`
 - Tests: `npm test` (vitest, pure JS formatting) and `cargo test --lib` in `src-tauri/`
 - The only data source is `~/.claude/statusline-last.json`; the app makes no
   other reads and no network calls beyond its own update check.

@@ -93,7 +93,7 @@ WCAG 1.4.11 bar for a graphic carrying meaning.
 ## Run & test
 
 ```
-npm install
+npm ci
 npm test                             # vitest: src/format.test.js
 cargo test --lib                     # in src-tauri: parsing, thresholds, icon, file modes
 npm run tauri dev
