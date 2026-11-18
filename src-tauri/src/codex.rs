@@ -17,12 +17,27 @@ use std::time::Duration;
 const FIVE_HOURS_MINS: i64 = 300;
 const SEVEN_DAYS_MINS: i64 = 10_080;
 const RESPONSE_TIMEOUT: Duration = Duration::from_secs(15);
+/// Silent replies in a row before a running child is treated as hung.
+const HUNG_AFTER: u32 = 3;
+/// Longest pause between launch attempts while Codex keeps failing.
+const MAX_RETRY_SECS: u64 = 3_600;
+
+/// Every launch of `codex app-server` refreshes its plugin catalogue and
+/// leaves a ~30 MB copy behind in `~/.codex/.tmp/marketplaces/.staging`.
+/// Relaunching on each poll filled 112 GB in two months (18.11.2026), so a
+/// launch is the expensive step: keep one child for as long as it lives, and
+/// back off when launching keeps failing.
+pub fn retry_delay_secs(failures: u32, base: u64) -> u64 {
+    base.saturating_mul(1u64 << failures.saturating_sub(1).min(16))
+        .min(MAX_RETRY_SECS)
+}
 
 pub struct Client {
     child: Child,
     stdin: ChildStdin,
     lines: Receiver<String>,
     next_id: u64,
+    silent: u32,
 }
 
 impl Client {
@@ -60,6 +75,7 @@ impl Client {
             stdin,
             lines,
             next_id: 1,
+            silent: 0,
         };
         client.request(
             "initialize",
@@ -80,6 +96,12 @@ impl Client {
         }
     }
 
+    /// Worth keeping: the process runs and has not gone silent. An error
+    /// answer (no plan, rate limits unavailable) still means it is alive.
+    pub fn is_usable(&mut self) -> bool {
+        matches!(self.child.try_wait(), Ok(None)) && self.silent < HUNG_AFTER
+    }
+
     fn request(&mut self, method: &str, params: Value) -> Result<Value, Reading> {
         let id = self.next_id;
         self.next_id += 1;
@@ -88,10 +110,11 @@ impl Client {
         self.stdin.flush().map_err(|_| Reading::Failed)?;
 
         loop {
-            let line = self
-                .lines
-                .recv_timeout(RESPONSE_TIMEOUT)
-                .map_err(|_| Reading::Failed)?;
+            let Ok(line) = self.lines.recv_timeout(RESPONSE_TIMEOUT) else {
+                self.silent += 1;
+                return Err(Reading::Failed);
+            };
+            self.silent = 0;
             let Ok(value) = serde_json::from_str::<Value>(&line) else {
                 continue;
             };
@@ -206,6 +229,13 @@ fn parse_window(value: &Value, now: i64) -> Option<Window> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn relaunches_back_off_to_an_hour() {
+        let delays: Vec<u64> = (1..=9).map(|n| retry_delay_secs(n, 30)).collect();
+        assert_eq!(delays, [30, 60, 120, 240, 480, 960, 1920, 3600, 3600]);
+        assert_eq!(retry_delay_secs(u32::MAX, 30), 3600);
+    }
 
     #[test]
     fn gui_path_includes_the_codex_launchers_sibling_runtime() {

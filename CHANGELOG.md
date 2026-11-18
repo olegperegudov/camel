@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fixed Camel slowly filling the disk when Codex can't report its limits (for example, without a Codex plan). It no longer restarts Codex every 30 seconds, and if Codex keeps failing it waits longer between tries, up to an hour.
+    - Every launch of `codex app-server` refreshes its plugin catalogue and leaves a ~30 MB copy in `~/.codex/.tmp/marketplaces/.staging`; relaunching on each failed poll piled up ~3,700 copies (112 GB) in two months. Camel now keeps one child while it runs and answers, drops it only when it exits or misses three replies in a row, and relaunches with a 30 s → 1 h back-off (`codex::retry_delay_secs`, tested).
+
 ## v0.1.26 — 2026-11-13
 
 - Under the hood only: every part the app is built from is now locked to an exact, checked version, so a build can never pick up a newer one on its own.

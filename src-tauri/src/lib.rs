@@ -354,23 +354,38 @@ pub fn run() {
 
             let codex_handle = handle.clone();
             tauri::async_runtime::spawn_blocking(move || {
+                // Launching Codex is the expensive step (see codex::retry_delay_secs):
+                // one child lives as long as it answers, relaunches back off.
                 let mut client: Option<codex::Client> = None;
+                let mut failed_launches: u32 = 0;
+                let mut next_launch: i64 = 0;
                 loop {
+                    let now = limits::now_secs();
                     let reading = match client.as_mut() {
-                        Some(active) => active.read(limits::now_secs()),
-                        None => match codex::Client::connect() {
+                        Some(active) => Some(active.read(now)),
+                        None if now < next_launch => None,
+                        None => Some(match codex::Client::connect() {
                             Ok(mut connected) => {
-                                let reading = connected.read(limits::now_secs());
+                                let reading = connected.read(now);
                                 client = Some(connected);
                                 reading
                             }
                             Err(state) => state,
-                        },
+                        }),
                     };
-                    if matches!(reading, limits::Reading::Failed) {
+                    if client.as_mut().is_some_and(|active| !active.is_usable()) {
                         client = None;
                     }
-                    set_codex_reading(&codex_handle, reading);
+                    if let Some(reading) = reading {
+                        if matches!(reading, limits::Reading::Ok(_)) {
+                            failed_launches = 0;
+                        } else if client.is_none() {
+                            failed_launches += 1;
+                            next_launch = now
+                                + codex::retry_delay_secs(failed_launches, POLL_SECS) as i64;
+                        }
+                        set_codex_reading(&codex_handle, reading);
+                    }
                     std::thread::sleep(std::time::Duration::from_secs(POLL_SECS));
                 }
             });
