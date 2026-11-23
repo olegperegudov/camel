@@ -41,7 +41,9 @@ Codex is a live source rather than a file adapter. Camel launches the installed
 `codex app-server`, which owns the current ChatGPT login, and calls its public
 `account/rateLimits/read` method once per poll. Camel never opens `auth.json`,
 never receives a token and never sends credentials through the webview. The
-child process stays alive between polls. Camel selects the bucket containing a
+child process stays alive between polls. The tray's "Show Codex" tick
+(`settings.rs`, persisted in `settings.json` in the data dir) turns the whole
+source off: no row, and the poller drops the child instead of launching one. Camel selects the bucket containing a
 300-minute and a 10,080-minute window; backend-owned bucket names are not part
 of the contract.
 

@@ -11,12 +11,13 @@ mod codex;
 mod limits;
 mod mac_window;
 mod private;
+mod settings;
 mod tray_icon;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use tauri::{
-    menu::{MenuBuilder, MenuItem},
+    menu::{CheckMenuItem, MenuBuilder, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager,
 };
@@ -48,6 +49,8 @@ const RELEASES_URL: &str = "https://github.com/olegperegudov/camel/releases";
 struct AppState {
     claude_accounts: Mutex<Vec<limits::Account>>,
     codex_account: Mutex<limits::Account>,
+    /// The tray's "Show Codex" tick. Off: no Codex row and no Codex child.
+    codex_enabled: AtomicBool,
     update_badge: AtomicBool,
     update_version: Mutex<Option<String>>,
     /// macOS delivers tray clicks inconsistently across versions — some send
@@ -156,8 +159,10 @@ fn all_accounts(state: &AppState) -> Vec<limits::Account> {
             reading: limits::Reading::Missing,
         });
     }
-    if let Ok(codex) = state.codex_account.lock() {
-        accounts.push(codex.clone());
+    if state.codex_enabled.load(Ordering::Relaxed) {
+        if let Ok(codex) = state.codex_account.lock() {
+            accounts.push(codex.clone());
+        }
     }
     accounts
 }
@@ -319,6 +324,7 @@ pub fn run() {
                 agent: "Codex".to_string(),
                 reading: limits::Reading::Loading,
             }),
+            codex_enabled: AtomicBool::new(settings::codex_enabled(&settings::dir())),
             update_badge: AtomicBool::new(false),
             update_version: Mutex::new(None),
             last_toggle: Mutex::new(None),
@@ -360,6 +366,18 @@ pub fn run() {
                 let mut failed_launches: u32 = 0;
                 let mut next_launch: i64 = 0;
                 loop {
+                    let enabled = codex_handle
+                        .try_state::<AppState>()
+                        .is_some_and(|s| s.codex_enabled.load(Ordering::Relaxed));
+                    if !enabled {
+                        // Dropping the client kills the child; a fresh tick
+                        // after re-enabling launches at once, no back-off.
+                        client = None;
+                        failed_launches = 0;
+                        next_launch = 0;
+                        std::thread::sleep(std::time::Duration::from_secs(POLL_SECS));
+                        continue;
+                    }
                     let now = limits::now_secs();
                     let reading = match client.as_mut() {
                         Some(active) => Some(active.read(now)),
@@ -468,9 +486,16 @@ fn build_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         None::<&str>,
     )?;
     let quit = MenuItem::with_id(app, "quit", "Quit Camel", true, None::<&str>)?;
+    // Codex installed but unused: one untick and Camel stops launching it.
+    let codex_on = app
+        .try_state::<AppState>()
+        .is_some_and(|s| s.codex_enabled.load(Ordering::Relaxed));
+    let codex = CheckMenuItem::with_id(app, "codex", "Show Codex", true, codex_on, None::<&str>)?;
 
     let menu = MenuBuilder::new(app)
         .item(&update)
+        .separator()
+        .item(&codex)
         .separator()
         .item(&version)
         .item(&quit)
@@ -507,6 +532,7 @@ fn build_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                     debug_log::log(&format!("opening the release list failed: {}", e));
                 }
             }
+            "codex" => toggle_codex(app),
             "quit" => app.exit(0),
             _ => {}
         })
@@ -525,6 +551,20 @@ fn build_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         })
         .build(app)?;
     Ok(())
+}
+
+/// Flip the "Show Codex" tick: remember it, repaint, and let the poller
+/// start or stop the Codex child on its next tick.
+fn toggle_codex(app: &AppHandle) {
+    let Some(state) = app.try_state::<AppState>() else { return };
+    let enabled = !state.codex_enabled.load(Ordering::Relaxed);
+    state.codex_enabled.store(enabled, Ordering::Relaxed);
+    if let Err(e) = settings::set_codex_enabled(&settings::dir(), enabled) {
+        debug_log::log(&format!("settings: saving codex={} failed: {}", enabled, e));
+    }
+    debug_log::log(&format!("codex {}", if enabled { "shown" } else { "hidden" }));
+    apply_tray(app);
+    let _ = app.emit("limits-changed", ());
 }
 
 /// One menu item, two jobs: check when nothing is pending, install once a

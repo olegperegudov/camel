@@ -56,7 +56,8 @@ exact numbers. A green dot on the icon means a Camel update is ready.
 
 Signed into Claude Code more than once — a personal account and a work one? Each
 login gets its own pair of pills. Codex joins them automatically when its CLI is
-installed and signed into ChatGPT. The panel names every agent, and each is
+installed and signed into ChatGPT; untick "Show Codex" in the menu to leave it
+out. The panel names every agent, and each is
 dated on its own: one can be minutes old while another has been idle since
 yesterday.
 
