@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.1.30 — 2026-11-23
+
 - New "Show Codex" tick in the menu. Untick it if you have Codex installed but don't use it: Camel hides the Codex row and stops starting Codex in the background. The choice is remembered.
     - Off drops the `codex app-server` child (no launches at all, so no `.staging` copies on the Codex side). Stored in `settings.json` next to the debug log; an unreadable file falls back to on.
 
